@@ -1,6 +1,6 @@
 [project]
 name = "just-dna-lite"
-version = "0.2.9"
+version = "0.3.1"
 description = "Just DNA Lite version to analyze your omics faster"
 readme = "README.md"
 requires-python = ">=3.13, <3.14"
@@ -11,7 +11,7 @@ dependencies = [
   "pyyaml>=6.0.3",
   "dagster-dg-cli>=1.12.22",
   "google-genai>=1.71.0",
-  "just-prs>=0.4.2",
+  "just-prs>=0.4.5",
 ]
 
 [tool.uv.sources]
@@ -28,8 +28,10 @@ dev = [
 [project.scripts]
 start = "just_dna_lite.cli:_start_all_cli"
 ui = "webui.run:main"
+serve = "webui.run:serve"
 dagster-ui = "just_dna_lite.cli:_start_dagster_cli"
 pipelines = "just_dna_lite.cli:app"
+kill-ports = "webui.run:kill_ports"
 
 [tool.uv.workspace]
 members = ["just-dna-pipelines", "webui"]

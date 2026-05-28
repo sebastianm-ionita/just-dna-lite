@@ -141,6 +141,16 @@ uv run start
 
 Open the URL printed in the terminal (usually `http://localhost:3000`). Upload your VCF and start exploring.
 
+#### Production mode (no Node.js at runtime)
+
+If you don't need the development server and want a simpler, single-process setup:
+
+```bash
+uv run serve
+```
+
+This compiles the frontend once and serves everything from a single Python process on one port. No Node.js dev server running, no hot-reload overhead, no port juggling — just the app. Good for workshops, demos, or if you simply want to use the tool without debugging anything. Use `uv run kill-ports` to clean up stale processes if needed.
+
 ### Run with Podman or Docker (no Python required)
 
 Don't want to install Python? [Podman](https://podman.io/) (or [Docker](https://www.docker.com/products/docker-desktop/)) packages the entire app so it runs the same on any computer. This still runs on your machine — the container is just a convenient way to get everything pre-installed.
@@ -295,10 +305,12 @@ Most of the variants in GWAS-based annotation are statistical associations, not 
 ## Running individual components
 
 ```bash
-uv run start             # Full stack (Web UI + pipeline)
-uv run ui                # Web UI only
+uv run start             # Full stack (Web UI + pipeline) — development mode
+uv run serve             # Production mode — single Python process, no Node.js
+uv run ui                # Web UI only (dev mode)
 uv run dagster-ui        # Dagster pipeline UI only
 uv run pipelines --help  # CLI tools
+uv run kill-ports        # Kill stale processes on ports 3000/8000
 ```
 
 ### Optional: pre-download Ensembl annotations

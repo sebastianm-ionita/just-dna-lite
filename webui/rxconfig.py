@@ -1,49 +1,29 @@
+from __future__ import annotations
+
 import os
-import socket
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 import reflex as rx
 from reflex.plugins.sitemap import SitemapPlugin
 
-from webui.deployment_urls import resolve_public_backend_base_url
-
 _IN_CONTAINER = os.path.exists("/.dockerenv") or os.environ.get("container") == "podman"
-
-
-def _find_free_port(start: int = 8000, end: int = 9000) -> int:
-    for port in range(start, end):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            if s.connect_ex(("localhost", port)) != 0:
-                return port
-    return start
-
-
-backend_port = int(os.getenv("BACKEND_PORT", "0")) or _find_free_port(8000)
-api_url = resolve_public_backend_base_url(backend_port)
-
-# Persist so state/backend links use the same browser-reachable URL as Reflex
-os.environ["API_URL"] = api_url
-
-# In containers: allow all Vite hosts so the mapped port is reachable from the host.
-# Locally: restrict to the production domain.
 _vite_hosts: list[str] | bool = True if _IN_CONTAINER else ["lite.just-dna.life"]
 
 config = rx.Config(
     app_name="webui",
-    env_file="../.env",
-    backend_port=backend_port,
-    api_url=api_url,
-    vite_allowed_hosts=_vite_hosts,
     plugins=[rx.plugins.RadixThemesPlugin()],
     disable_plugins=[SitemapPlugin],
-    # Fomantic UI styling
+    vite_allowed_hosts=_vite_hosts,
     stylesheets=[
         "https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.4/dist/semantic.min.css",
     ],
-    # jQuery and Fomantic UI JS for interactive components
     head_components=[
         rx.script(src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"),
         rx.script(src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.4/dist/semantic.min.js"),
     ],
-    # Tailwind is disabled
     tailwind=None,
 )

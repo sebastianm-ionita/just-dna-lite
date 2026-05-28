@@ -5,11 +5,12 @@ description = "Reflex Web UI for just-dna-lite"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "reflex>=0.9.2.post1",
+  "reflex>=0.9.3",
   "just-dna-pipelines",
   "granian>=2.7.3",
   "fastapi>=0.135.3",
-  "prs-ui>=0.2.7"
+  "prs-ui>=0.3.1",
+  "gunicorn>=26.0.0",
 ]
 
 [tool.uv.sources]
@@ -20,6 +21,7 @@ just-dna-pipelines = { workspace = true }
 
 [project.scripts]
 run = "webui.run:main"
+serve = "webui.run:serve"
 
 [build-system]
 requires = ["uv-build"]

@@ -42,7 +42,7 @@ from just_dna_pipelines.module_registry import (
     refresh_module_registry,
 )
 from reflex_mui_datagrid import LazyFrameGridMixin, extract_vcf_descriptions, scan_file
-from webui.deployment_urls import resolve_dagster_web_public_url, resolve_public_backend_base_url
+from webui.deployment_urls import resolve_dagster_web_public_url
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +50,20 @@ GENERATED_MODULES_DIR: Path = get_generated_modules_dir()
 
 
 def _backend_api_url() -> str:
-    """Return the browser-reachable Reflex backend URL for custom API routes."""
-    if os.environ.get("API_URL", "").strip():
-        return os.environ["API_URL"].strip().rstrip("/")
-    port_raw = os.environ.get("BACKEND_PORT", "8000").strip()
-    fb = int(port_raw) if port_raw.isdigit() else 8000
-    return resolve_public_backend_base_url(fb)
+    """Return the browser-reachable Reflex backend URL for custom API routes.
+
+    In production FULLSTACK mode, returns empty string (relative URLs work
+    since frontend and backend share the same port).  For explicit
+    deployments behind a reverse proxy, set ``PUBLIC_BACKEND_URL`` or
+    ``API_URL``.
+    """
+    pub = os.environ.get("PUBLIC_BACKEND_URL", "").strip()
+    if pub:
+        return pub.rstrip("/")
+    api = os.environ.get("API_URL", "").strip()
+    if api:
+        return api.rstrip("/")
+    return ""
 
 
 # Module metadata with titles, descriptions, and icons
@@ -3288,8 +3296,8 @@ class OutputPreviewState(LazyFrameGridMixin, rx.State):
 
 from prs_ui import PRSComputeStateMixin
 import prs_ui
-import prs_ui.state as _prs_ui_state
-from prs_ui.state import _enriched_to_row_dict as _prs_enriched_to_row_dict
+import prs_ui.mixin as _prs_ui_mixin
+from prs_ui.mixin import _enriched_to_row_dict as _prs_enriched_to_row_dict
 from just_prs import resolve_cache_dir as _prs_resolve_cache_dir
 from just_prs.prs import compute_prs as _compute_prs_fn
 from just_prs.prs_catalog import PRSCatalog as _PRSCatalog
@@ -3320,11 +3328,11 @@ def _ensure_prs_catalog_cache_current(cache_dir: str) -> None:
         return
 
     cache_path = Path(cache_dir)
-    if _prs_ui_state._catalog.cache_dir != cache_path:
-        _prs_ui_state._catalog = _PRSCatalog(cache_dir=cache_path)
+    if _prs_ui_mixin._catalog.cache_dir != cache_path:
+        _prs_ui_mixin._catalog = _PRSCatalog(cache_dir=cache_path)
 
     if _prs_scores_cache_is_stale(cache_path):
-        _prs_ui_state._catalog.reload()
+        _prs_ui_mixin._catalog.reload()
         _prs_catalog_instance = None
 
     _prs_cache_checked = True
@@ -3727,7 +3735,7 @@ class PRSTraitState(LazyFrameGridMixin, rx.State):
     def _build_trait_df(self, genome_build: str) -> pl.DataFrame:
         """Group PGS Catalog scores by trait and return a summary DataFrame."""
         _ensure_prs_catalog_cache_current(str(_prs_resolve_cache_dir()))
-        lf = _prs_ui_state._catalog.scores(genome_build=genome_build)
+        lf = _prs_ui_mixin._catalog.scores(genome_build=genome_build)
         df = lf.select(
             "pgs_id", "trait_reported", "trait_efo", "trait_efo_id", "n_variants",
         ).collect()
