@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-import reflex as rx
-from reflex.plugins.sitemap import SitemapPlugin
+import reflex as rx  # noqa: E402
+from reflex.plugins.sitemap import SitemapPlugin  # noqa: E402
 
 os.environ.setdefault("REFLEX_SSR", "true")
 os.environ.setdefault("REFLEX_SOCKET_MAX_HTTP_BUFFER_SIZE", "50000000")
@@ -47,4 +47,5 @@ config = rx.Config(
         rx.script(src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.4/dist/semantic.min.js"),
     ],
     tailwind=None,
+    show_built_with_reflex=False,
 )

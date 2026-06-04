@@ -1,27 +1,29 @@
 from __future__ import annotations
 
+import io
 import sys
 from pathlib import Path
-
-import reflex as rx
-import io
 import zipfile
 
+import reflex as rx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from just_dna_pipelines.runtime import load_env
 from just_dna_pipelines.annotation.resources import get_user_output_dir
+from reflex import constants
+from reflex_base.config import get_config
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 # Load environment variables before importing pages/state modules that resolve
 # data paths at import time.
 load_env()
 
-from webui.pages.dashboard import dashboard_page
-from webui.pages.index import index_page
-from webui.pages.analysis import analysis_page
-from webui.pages.annotate import annotate_page
-from webui.pages.modules import modules_page
-from webui.pages.faq import faq_page
+from webui.pages.dashboard import dashboard_page  # noqa: E402
+from webui.pages.index import index_page  # noqa: E402
+from webui.pages.analysis import analysis_page  # noqa: E402
+from webui.pages.annotate import annotate_page  # noqa: E402
+from webui.pages.modules import modules_page  # noqa: E402
+from webui.pages.faq import faq_page  # noqa: E402
 
 # Note: Shutdown cleanup of STARTED runs is handled by the parent `uv run start` command,
 # which catches Ctrl+C and cleans up before killing subprocesses.
@@ -93,7 +95,7 @@ def check_hf_authentication() -> None:
 # Run authentication check before anything else
 # check_hf_authentication()
 
-from just_dna_pipelines.annotation.resources import get_generated_modules_dir
+from just_dna_pipelines.annotation.resources import get_generated_modules_dir  # noqa: E402
 
 _GENERATED_MODULES_DIR = get_generated_modules_dir()
 
@@ -300,11 +302,45 @@ async def serve_module_logo(module_name: str) -> FileResponse:
 # REFLEX APP
 # ============================================================================
 
+
+def _event_websocket_path() -> str:
+    """Return the configured Reflex websocket endpoint path."""
+    config = get_config()
+    return config.prepend_backend_path(str(constants.Endpoint.EVENT))
+
+
+def _is_reflex_event_websocket(path: str) -> bool:
+    """Check whether a websocket path targets Reflex's event endpoint."""
+    event_path = _event_websocket_path().rstrip("/")
+    return path == event_path or path.startswith(f"{event_path}/")
+
+
+def _close_unmatched_websockets(asgi_app: ASGIApp) -> ASGIApp:
+    """Prevent websocket fallthrough into Reflex's catch-all static frontend.
+
+    In production fullstack mode Reflex mounts the compiled frontend at `/`.
+    Unknown websocket paths can otherwise reach Starlette StaticFiles, which
+    asserts that the ASGI scope is HTTP-only and logs a server exception.
+    """
+
+    async def guarded_app(scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "websocket" and not _is_reflex_event_websocket(
+            str(scope.get("path", ""))
+        ):
+            await send({"type": "websocket.close", "code": 1008})
+            return
+
+        await asgi_app(scope, receive, send)
+
+    return guarded_app
+
+
 app = rx.App(
     # Disable Radix theme to let Fomantic UI styles work properly
     theme=None,
-    # Use api_transformer to add custom FastAPI routes
-    api_transformer=api,
+    # Guard the Reflex backend before mounting it under custom FastAPI routes,
+    # so future FastAPI websocket routes can still be handled explicitly.
+    api_transformer=[_close_unmatched_websockets, api],
 )
 
 # Ensure pages are registered.
