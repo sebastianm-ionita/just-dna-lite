@@ -90,6 +90,8 @@ ENV REFLEX_USE_GRANIAN=true
 ENV DAGSTER_HOME=/app/data/interim/dagster
 # Bind Dagster to all interfaces so it's reachable from outside the container
 ENV DAGSTER_HOST=0.0.0.0
+# Default Dagster web UI port
+ENV DAGSTER_PORT=3005
 # uv cache in /tmp (always writable, not persisted — deps are already installed)
 ENV UV_CACHE_DIR=/tmp/uv-cache
 # Compile bytecode for faster startup
@@ -113,7 +115,7 @@ WORKDIR /app
 
 # Ports:
 #   3000 - Reflex frontend (Vite dev server)
-#   3005 - Dagster web UI
+#   3005 - Dagster web UI (default DAGSTER_PORT)
 #   8000 - Reflex backend API + websocket
 EXPOSE 3000 3005 8000
 

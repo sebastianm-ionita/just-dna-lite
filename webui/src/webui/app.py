@@ -7,8 +7,8 @@ import zipfile
 
 import reflex as rx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
-from just_dna_pipelines.annotation.analytics import inject_umami_tracker
+from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
+from just_dna_pipelines.annotation.analytics import inject_umami_tracker, umami_config
 from just_dna_pipelines.runtime import load_env
 from just_dna_pipelines.annotation.resources import get_user_output_dir
 from reflex import constants
@@ -243,8 +243,8 @@ async def download_agent_run_log(spec_name: str, version_dir: str, log_name: str
     )
 
 
-@api.get("/api/report/{user_id}/{sample_name}/{filename}")
-async def view_report_file(user_id: str, sample_name: str, filename: str) -> FileResponse | HTMLResponse:
+@api.get("/api/report/{user_id}/{sample_name}/{filename}", response_model=None)
+async def view_report_file(user_id: str, sample_name: str, filename: str) -> Response:
     """
     Serve an HTML report file for viewing in the browser.
     
@@ -386,9 +386,26 @@ def _disable_stale_frontend_cache(asgi_app: ASGIApp) -> ASGIApp:
     return guarded_app
 
 
+def _head_components() -> list[rx.Component]:
+    """Build app-level head scripts compiled into the Reflex frontend shell."""
+
+    umami_script_url, umami_website_id, umami_domains, umami_host_url = umami_config()
+    if not umami_script_url or not umami_website_id:
+        return []
+
+    umami_attrs: dict[str, str] = {"data-website-id": umami_website_id}
+    if umami_domains:
+        umami_attrs["data-domains"] = umami_domains
+    if umami_host_url:
+        umami_attrs["data-host-url"] = umami_host_url
+
+    return [rx.script(src=umami_script_url, custom_attrs=umami_attrs)]
+
+
 app = rx.App(
     # Disable Radix theme to let Fomantic UI styles work properly
     theme=None,
+    head_components=_head_components(),
     # Guard the Reflex backend before mounting it under custom FastAPI routes,
     # so future FastAPI websocket routes can still be handled explicitly.
     api_transformer=[_close_unmatched_websockets, _disable_stale_frontend_cache, api],

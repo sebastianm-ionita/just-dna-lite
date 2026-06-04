@@ -24,6 +24,23 @@ app = typer.Typer(
 )
 app.add_typer(module_compiler_app, name="module")
 
+DEFAULT_DAGSTER_PORT = 3005
+
+
+def _resolve_dagster_port(port: Optional[int]) -> int:
+    """Resolve the Dagster UI port from CLI override, env var, or default."""
+    if port is not None:
+        return port
+
+    port_text = os.getenv("DAGSTER_PORT", "").strip()
+    if not port_text:
+        return DEFAULT_DAGSTER_PORT
+
+    try:
+        return int(port_text)
+    except ValueError as exc:
+        raise typer.BadParameter("DAGSTER_PORT must be an integer") from exc
+
 
 def _ensure_dagster_config(dagster_home: Path) -> None:
     """
@@ -178,13 +195,13 @@ def start_dagster(
         ),
     ] = "just-dna-pipelines/src/just_dna_pipelines/annotation/definitions.py",
     port: Annotated[
-        int,
+        Optional[int],
         typer.Option(
             "--port",
             "-p",
-            help="Port for the Dagster UI.",
+            help="Port for the Dagster UI. Defaults to DAGSTER_PORT or 3005.",
         ),
-    ] = 3005,
+    ] = None,
     host: Annotated[
         str,
         typer.Option(
@@ -206,6 +223,7 @@ def start_dagster(
             raise typer.BadParameter(f"Dagster file not found: {file}")
 
     dagster_host = host or os.getenv("DAGSTER_HOST", "127.0.0.1")
+    dagster_port = _resolve_dagster_port(port)
 
     # Set DAGSTER_HOME to data/interim/dagster
     dagster_home = os.getenv("DAGSTER_HOME", "data/interim/dagster")
@@ -218,14 +236,14 @@ def start_dagster(
     
     typer.secho(f"🚀 Starting Dagster Dev (UI + Daemon) for {file}...", fg=typer.colors.BRIGHT_CYAN, bold=True)
     typer.echo(f"📁 Dagster home: {dagster_home}")
-    _kill_port_owner(port)
+    _kill_port_owner(dagster_port)
     
-    typer.secho(f"\n💡 Dagster UI will be available at: http://{dagster_host}:{port}\n", fg=typer.colors.GREEN, bold=True)
+    typer.secho(f"\n💡 Dagster UI will be available at: http://{dagster_host}:{dagster_port}\n", fg=typer.colors.GREEN, bold=True)
     
     dg_path = Path(sys.executable).parent / "dg"
     os.execvp(
         str(dg_path),
-        ["dg", "dev", "-f", str(dagster_file), "-p", str(port), "-h", dagster_host]
+        ["dg", "dev", "-f", str(dagster_file), "-p", str(dagster_port), "-h", dagster_host]
     )
 
 
@@ -243,8 +261,8 @@ def start_all(
         ),
     ] = "just-dna-pipelines/src/just_dna_pipelines/annotation/definitions.py",
     dagster_port: Annotated[
-        int, typer.Option("--dagster-port", help="Port for the Dagster UI.")
-    ] = 3005,
+        Optional[int], typer.Option("--dagster-port", help="Port for the Dagster UI. Defaults to DAGSTER_PORT or 3005.")
+    ] = None,
     dagster_host: Annotated[
         str,
         typer.Option("--dagster-host", help="Host for the Dagster webserver. Use 0.0.0.0 in containers."),
@@ -267,6 +285,7 @@ def start_all(
         root = Path.cwd()
 
     resolved_dagster_host = dagster_host or os.getenv("DAGSTER_HOST", "127.0.0.1")
+    resolved_dagster_port = _resolve_dagster_port(dagster_port)
 
     if granian:
         os.environ["REFLEX_USE_GRANIAN"] = "true"
@@ -283,7 +302,7 @@ def start_all(
     typer.secho("🏗️  Starting full Just DNA Pipelines stack...", fg=typer.colors.BRIGHT_MAGENTA, bold=True)
     
     # 0. Optionally clean up orphan processes
-    ports_to_clean = [3000, 3001, 8000, dagster_port]
+    ports_to_clean = [3000, 3001, 8000, resolved_dagster_port]
     if _env_flag_enabled("JUST_DNA_START_KILL_PORTS"):
         typer.echo(f"🧹 Cleaning up existing processes on ports {', '.join(map(str, ports_to_clean))}...")
         for port in ports_to_clean:
@@ -316,7 +335,7 @@ def start_all(
         typer.secho("🔒 IMMUTABLE MODE — file uploads disabled, public genomes only", fg=typer.colors.YELLOW, bold=True)
     typer.secho("⏳ Note: Reflex UI takes ~20s to initialize.", fg=typer.colors.YELLOW)
     typer.echo(f"  • Web UI:       http://localhost:3000 (Main Interface)")
-    typer.echo(f"  • Pipelines UI: http://localhost:{dagster_port} (Dagster Dashboard)")
+    typer.echo(f"  • Pipelines UI: http://localhost:{resolved_dagster_port} (Dagster Dashboard)")
     typer.echo(f"  • Backend API:  http://localhost:8000+ (Reflex Internal, auto-selected)")
     typer.echo("═" * 65 + "\n")
 
@@ -343,7 +362,7 @@ def start_all(
     dg_path = Path(sys.executable).parent / "dg"
     os.execvp(
         str(dg_path),
-        ["dg", "dev", "-f", str(dagster_file_path), "-p", str(dagster_port), "-h", resolved_dagster_host]
+        ["dg", "dev", "-f", str(dagster_file_path), "-p", str(resolved_dagster_port), "-h", resolved_dagster_host]
     )
 
 

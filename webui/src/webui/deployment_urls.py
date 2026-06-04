@@ -60,4 +60,5 @@ def resolve_dagster_web_public_url() -> str:
     base = os.environ.get("DAGSTER_WEB_URL", "").strip()
     if base:
         return _strip_base(base)
-    return "http://localhost:3005"
+    port = os.environ.get("DAGSTER_PORT", "3005").strip() or "3005"
+    return f"http://localhost:{port}"

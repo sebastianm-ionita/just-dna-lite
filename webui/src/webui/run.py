@@ -7,9 +7,25 @@ import shutil
 import signal
 import subprocess
 import sys
+import atexit
 from pathlib import Path
 
 from just_dna_pipelines.runtime import load_env
+
+DEFAULT_DAGSTER_FILE = "just-dna-pipelines/src/just_dna_pipelines/annotation/definitions.py"
+DEFAULT_DAGSTER_PORT = 3005
+
+
+def _run_reflex(command: str, run_args: dict[str, object]) -> None:
+    """Run Reflex and treat Ctrl+C as a normal shutdown."""
+
+    from reflex.reflex import _run
+    from reflex.utils import processes
+
+    try:
+        _run(**run_args)
+    except KeyboardInterrupt:
+        atexit.unregister(processes.atexit_handler)
 
 
 def _consume_immutable_flag() -> None:
@@ -26,6 +42,92 @@ def _setup() -> None:
     os.chdir(root)
 
 
+def _workspace_root() -> Path:
+    """Return the uv workspace root that contains webui and pipeline packages."""
+    return Path(__file__).resolve().parents[3]
+
+
+def _resolve_dagster_port() -> int:
+    """Resolve the Dagster UI port from DAGSTER_PORT."""
+    port_text = os.getenv("DAGSTER_PORT", "").strip()
+    if not port_text:
+        return DEFAULT_DAGSTER_PORT
+    try:
+        return int(port_text)
+    except ValueError as exc:
+        raise ValueError("DAGSTER_PORT must be an integer") from exc
+
+
+def _ensure_dagster_home(workspace_root: Path) -> Path:
+    """Create DAGSTER_HOME and the minimal Dagster config if needed."""
+    dagster_home = os.getenv("DAGSTER_HOME", "data/interim/dagster")
+    dagster_home_path = Path(dagster_home)
+    if not dagster_home_path.is_absolute():
+        dagster_home_path = workspace_root / dagster_home_path
+
+    dagster_home_path.mkdir(parents=True, exist_ok=True)
+    (dagster_home_path / "logs").mkdir(parents=True, exist_ok=True)
+
+    config_file = dagster_home_path / "dagster.yaml"
+    if not config_file.exists():
+        config_file.write_text("telemetry:\n  enabled: false\n", encoding="utf-8")
+
+    os.environ["DAGSTER_HOME"] = str(dagster_home_path)
+    return dagster_home_path
+
+
+def _port_is_listening(host: str, port: int) -> bool:
+    """Return True when a TCP listener is already reachable."""
+    import socket
+
+    probe_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.25)
+        return sock.connect_ex((probe_host, port)) == 0
+
+
+def _start_dagster_for_serve() -> subprocess.Popen[bytes] | None:
+    """Start Dagster web UI alongside production Reflex serve."""
+    workspace_root = _workspace_root()
+    dagster_file = workspace_root / os.getenv("DAGSTER_FILE", DEFAULT_DAGSTER_FILE)
+    dagster_host = os.getenv("DAGSTER_HOST", "127.0.0.1")
+    dagster_port = _resolve_dagster_port()
+    dagster_home = _ensure_dagster_home(workspace_root)
+
+    if _port_is_listening(dagster_host, dagster_port):
+        print(
+            f"Dagster UI already appears to be listening at http://{dagster_host}:{dagster_port}.",
+            flush=True,
+        )
+        return None
+
+    dg_path = Path(sys.executable).parent / "dg"
+    process = subprocess.Popen(
+        ["dg", "dev", "-f", str(dagster_file), "-p", str(dagster_port), "-h", dagster_host],
+        cwd=workspace_root,
+        executable=str(dg_path) if dg_path.exists() else None,
+        start_new_session=True,
+    )
+    print(f"Started Dagster UI at http://{dagster_host}:{dagster_port}", flush=True)
+    print(f"Dagster home: {dagster_home}", flush=True)
+    return process
+
+
+def _stop_process(process: subprocess.Popen[bytes] | None) -> None:
+    """Stop a background process group created by this launcher."""
+    if process is None or process.poll() is not None:
+        return
+
+    try:
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+
+
 def main() -> None:
     """Start the Reflex development server.
 
@@ -35,11 +137,10 @@ def main() -> None:
     _setup()
 
     from reflex import constants
-    from reflex.reflex import _run
     from reflex_base.config import environment
 
     environment.REFLEX_COMPILE_CONTEXT.set(constants.CompileContext.RUN)
-    _run(env=constants.Env.DEV)
+    _run_reflex("Reflex app", {"env": constants.Env.DEV})
 
 
 def serve() -> None:
@@ -65,22 +166,26 @@ def serve() -> None:
     if app_url:
         os.environ["API_URL"] = app_url
         print(f"Using fullstack public app URL for Reflex API: {app_url}", flush=True)
+    dagster_process = _start_dagster_for_serve()
+    atexit.register(_stop_process, dagster_process)
     generate_crawler_assets()
 
     from reflex import constants
     from reflex.constants.base import RunningMode
-    from reflex.reflex import _run
     from reflex_base.config import environment
 
     port_str = os.getenv("APP_PORT", "").strip()
     port = int(port_str) if port_str else None
 
     environment.REFLEX_COMPILE_CONTEXT.set(constants.CompileContext.RUN)
-    _run(
-        env=constants.Env.PROD,
-        running_mode=RunningMode.FULLSTACK,
-        frontend_port=port,
-        backend_port=port,
+    _run_reflex(
+        "Reflex app",
+        {
+            "env": constants.Env.PROD,
+            "running_mode": RunningMode.FULLSTACK,
+            "frontend_port": port,
+            "backend_port": port,
+        },
     )
 
 

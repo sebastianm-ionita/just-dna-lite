@@ -23,7 +23,7 @@ services:
       dockerfile: Containerfile
     ports:
       - "3000:3000"   # Web UI (Vite frontend)
-      - "3005:3005"   # Dagster pipeline dashboard
+      - "${DAGSTER_PORT:-3005}:${DAGSTER_PORT:-3005}"   # Dagster pipeline dashboard
       - "8000:8000"   # Backend API + websocket
     volumes:
       # Your VCF files — drop .vcf/.vcf.gz here, they appear in the upload list
@@ -36,7 +36,8 @@ services:
     environment:
       - API_URL=${API_URL:-http://localhost:8000}
       - PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL:-}
-      - DAGSTER_WEB_URL=${DAGSTER_WEB_URL:-http://localhost:3005}
+      - DAGSTER_PORT=${DAGSTER_PORT:-3005}
+      - DAGSTER_WEB_URL=${DAGSTER_WEB_URL:-}
       - PUBLIC_DAGSTER_WEB_URL=${PUBLIC_DAGSTER_WEB_URL:-}
       - JUST_DNA_PIPELINES_LOGIN=${JUST_DNA_PIPELINES_LOGIN:-none}
       - HF_TOKEN=${HF_TOKEN:-}

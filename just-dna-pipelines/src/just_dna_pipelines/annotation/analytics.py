@@ -4,8 +4,10 @@ import html
 import os
 import re
 
-DEFAULT_UMAMI_SCRIPT_URL = "https://umami.just-dna.life/script.js"
+DEFAULT_UMAMI_SCRIPT_URL = "https://lite.just-dna.life/stats/script.js"
 DEFAULT_UMAMI_WEBSITE_ID = "7f9afbbf-3ab8-4570-87c4-4bdf78a2ea31"
+DEFAULT_UMAMI_DOMAINS = "lite.just-dna.life"
+DEFAULT_UMAMI_HOST_URL = "https://lite.just-dna.life/stats"
 
 _HEAD_CLOSE_RE = re.compile(r"</head\s*>", flags=re.IGNORECASE)
 
@@ -15,8 +17,8 @@ def umami_config() -> tuple[str, str, str, str]:
 
     script_url = os.environ.get("UMAMI_SCRIPT_URL", DEFAULT_UMAMI_SCRIPT_URL).strip()
     website_id = os.environ.get("UMAMI_WEBSITE_ID", DEFAULT_UMAMI_WEBSITE_ID).strip()
-    domains = os.environ.get("UMAMI_DOMAINS", "").strip()
-    host_url = os.environ.get("UMAMI_HOST_URL", "").strip()
+    domains = os.environ.get("UMAMI_DOMAINS", DEFAULT_UMAMI_DOMAINS).strip()
+    host_url = os.environ.get("UMAMI_HOST_URL", DEFAULT_UMAMI_HOST_URL).strip()
     return script_url, website_id, domains, host_url
 
 

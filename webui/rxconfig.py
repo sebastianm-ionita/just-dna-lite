@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 import reflex as rx  # noqa: E402
-from just_dna_pipelines.annotation.analytics import umami_config  # noqa: E402
 from reflex.plugins.sitemap import SitemapPlugin  # noqa: E402
 
 os.environ.setdefault("REFLEX_SSR", "true")
@@ -38,19 +37,10 @@ _vite_hosts = _configured_hosts()
 def _head_components() -> list[rx.Component]:
     """Build static head scripts compiled into the Reflex frontend."""
 
-    umami_script_url, umami_website_id, umami_domains, umami_host_url = umami_config()
-    components: list[rx.Component] = [
+    return [
         rx.script(src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"),
         rx.script(src="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.4/dist/semantic.min.js"),
     ]
-    if umami_script_url and umami_website_id:
-        umami_attrs: dict[str, str] = {"data-website-id": umami_website_id}
-        if umami_domains:
-            umami_attrs["data-domains"] = umami_domains
-        if umami_host_url:
-            umami_attrs["data-host-url"] = umami_host_url
-        components.append(rx.script(src=umami_script_url, custom_attrs=umami_attrs))
-    return components
 
 config = rx.Config(
     app_name="webui",
