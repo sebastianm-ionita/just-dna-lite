@@ -8,7 +8,7 @@
 
 just-dna-lite is an open-source platform for personal genome annotation. You upload a genome file (VCF), pick what you want to know, and get results in minutes. It runs entirely on your machine — nothing leaves your computer. The source code is on [GitHub](https://github.com/dna-seq/just-dna-lite) under the AGPL v3 license.
 
-![just-dna-lite annotation interface](/just_dna_lite_annotations.jpg)
+![just-dna-lite annotation interface](/images/just_dna_lite_annotations.jpg)
 
 ### Who is behind this project?
 
@@ -117,9 +117,9 @@ Everything outside this short list — the vast majority of what a genomic tool 
 
 An agentic pipeline that turns a research paper (PDF, CSV, or text description) into a validated annotation module. You upload a paper, describe what you want, and the AI reads it, queries biomedical databases (EuropePMC, Open Targets, BioRxiv), extracts variants, and produces a ready-to-use module.
 
-![AI Module Creator — upload a paper and describe the module](/just_dna_lite_AI_module_builder_step_I.jpg)
+![AI Module Creator — upload a paper and describe the module](/images/just_dna_lite_AI_module_builder_step_I.jpg)
 
-![Generated module ready for review and registration](/just_dna_lite_AI_module_builder_step_II.jpg)
+![Generated module ready for review and registration](/images/just_dna_lite_AI_module_builder_step_II.jpg)
 
 ### How reliable are AI-generated modules?
 

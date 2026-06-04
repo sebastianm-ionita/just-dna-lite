@@ -3,6 +3,7 @@ from __future__ import annotations
 import reflex as rx
 
 from webui.components.layout import template, fomantic_icon
+from webui.crawler_assets import page_image_url, page_meta
 from webui.state import AuthState, UploadState
 
 
@@ -249,7 +250,13 @@ def dagster_section() -> rx.Component:
     )
 
 
-@rx.page(route="/dashboard", title="Dashboard | Just DNA Lite", on_load=UploadState.on_load)
+@rx.page(
+    route="/dashboard",
+    title="Dashboard | Just DNA Lite",
+    on_load=UploadState.on_load,
+    meta=page_meta("/dashboard"),
+    image=page_image_url(),
+)
 def dashboard_page() -> rx.Component:
     """Dashboard page with Fomantic UI layout."""
     return template(

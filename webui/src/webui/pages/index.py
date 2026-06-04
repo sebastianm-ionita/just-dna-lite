@@ -8,6 +8,7 @@ from __future__ import annotations
 import reflex as rx
 
 from webui.components.layout import template, two_column_layout
+from webui.crawler_assets import page_image_url, page_meta
 from webui.state import UploadState
 from webui.pages.annotate import (
     file_column_content,
@@ -16,7 +17,13 @@ from webui.pages.annotate import (
 )
 
 
-@rx.page(route="/", title="Just DNA Lite", on_load=UploadState.on_load)
+@rx.page(
+    route="/",
+    title="Just DNA Lite",
+    on_load=UploadState.on_load,
+    meta=page_meta("/"),
+    image=page_image_url(),
+)
 def index_page() -> rx.Component:
     """Main annotation page with two-panel run-centric layout."""
     return template(

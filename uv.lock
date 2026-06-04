@@ -1807,7 +1807,7 @@ wheels = [
 
 [[package]]
 name = "just-dna-lite"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "." }
 dependencies = [
     { name = "dagster-dg-cli" },
@@ -4202,7 +4202,7 @@ wheels = [
 
 [[package]]
 name = "webui"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "webui" }
 dependencies = [
     { name = "fastapi" },
@@ -4225,7 +4225,7 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=26.0.0" },
     { name = "just-dna-pipelines", editable = "just-dna-pipelines" },
     { name = "prs-ui", specifier = ">=0.3.1" },
-    { name = "reflex", specifier = ">=0.9.3" },
+    { name = "reflex", specifier = "==0.9.4" },
 ]
 
 [package.metadata.requires-dev]

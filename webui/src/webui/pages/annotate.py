@@ -13,6 +13,7 @@ from __future__ import annotations
 import reflex as rx
 
 from webui.components.layout import template, two_column_layout, fomantic_icon
+from webui.crawler_assets import page_image_url, page_meta
 from webui.state import UploadState, OutputPreviewState, PRSState, PRSTraitState
 from reflex_mui_datagrid import data_grid, lazyframe_grid, lazyframe_grid_stats_bar
 from prs_ui import (
@@ -2889,7 +2890,13 @@ def polling_interval() -> rx.Component:
 # MAIN PAGE
 # ============================================================================
 
-@rx.page(route="/annotate", title="Annotate | Just DNA Lite", on_load=UploadState.on_load)
+@rx.page(
+    route="/annotate",
+    title="Annotate | Just DNA Lite",
+    on_load=UploadState.on_load,
+    meta=page_meta("/annotate"),
+    image=page_image_url(),
+)
 def annotate_page() -> rx.Component:
     """Annotation page with two-panel run-centric layout."""
     return template(

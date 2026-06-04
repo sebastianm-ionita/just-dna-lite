@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -160,6 +161,12 @@ def _kill_port_owner(port: int) -> None:
         typer.secho(f"Error during port cleanup for {port}: {e}", fg=typer.colors.RED, err=True)
 
 
+def _env_flag_enabled(name: str) -> bool:
+    """Return true when an env flag is explicitly enabled."""
+
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 @app.command("dagster")
 def start_dagster(
     file: Annotated[
@@ -275,11 +282,21 @@ def start_all(
 
     typer.secho("🏗️  Starting full Just DNA Pipelines stack...", fg=typer.colors.BRIGHT_MAGENTA, bold=True)
     
-    # 0. Clean up orphan processes
+    # 0. Optionally clean up orphan processes
     ports_to_clean = [3000, 3001, 8000, dagster_port]
-    typer.echo(f"🧹 Cleaning up existing processes on ports {', '.join(map(str, ports_to_clean))}...")
-    for port in ports_to_clean:
-        _kill_port_owner(port)
+    if _env_flag_enabled("JUST_DNA_START_KILL_PORTS"):
+        typer.echo(f"🧹 Cleaning up existing processes on ports {', '.join(map(str, ports_to_clean))}...")
+        for port in ports_to_clean:
+            _kill_port_owner(port)
+        web_dir = root / "webui" / ".web"
+        if web_dir.exists():
+            shutil.rmtree(web_dir)
+            typer.echo(f"🧹 Removed stale Reflex build directory: {web_dir}")
+    else:
+        typer.echo(
+            "Port cleanup is disabled. Set JUST_DNA_START_KILL_PORTS=true to "
+            f"stop existing listeners on ports {', '.join(map(str, ports_to_clean))} before startup."
+        )
 
     # 1. Start the UI in the background via the workspace script
     typer.secho("🚀 Starting Reflex Web UI...", fg=typer.colors.BRIGHT_CYAN)

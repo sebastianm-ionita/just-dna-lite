@@ -1,11 +1,11 @@
 [project]
 name = "webui"
-version = "0.1.5"
+version = "0.1.6"
 description = "Reflex Web UI for just-dna-lite"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "reflex>=0.9.3",
+  "reflex==0.9.4",
   "just-dna-pipelines",
   "granian>=2.7.3",
   "fastapi>=0.135.3",

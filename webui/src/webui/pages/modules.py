@@ -10,6 +10,7 @@ from __future__ import annotations
 import reflex as rx
 
 from webui.components.layout import template, two_column_layout, fomantic_icon
+from webui.crawler_assets import page_image_url, page_meta
 from webui.state import UploadState, AgentState
 
 
@@ -1203,7 +1204,13 @@ def agent_chat_panel() -> rx.Component:
 # MAIN PAGE
 # ============================================================================
 
-@rx.page(route="/modules", title="Module Creator | Just DNA Lite", on_load=UploadState.load_modules_page)
+@rx.page(
+    route="/modules",
+    title="Module Creator | Just DNA Lite",
+    on_load=UploadState.load_modules_page,
+    meta=page_meta("/modules"),
+    image=page_image_url(),
+)
 def modules_page() -> rx.Component:
     """Module Manager page — sources, editing slot, and AI agent chat."""
     return template(

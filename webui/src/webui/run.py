@@ -58,6 +58,15 @@ def serve() -> None:
         shutil.rmtree(web_dir)
         print("Removed stale .web build directory before production serve.", flush=True)
 
+    from webui.crawler_assets import generate_crawler_assets
+    from webui.deployment_urls import resolve_configured_public_app_url
+
+    app_url = resolve_configured_public_app_url()
+    if app_url:
+        os.environ["API_URL"] = app_url
+        print(f"Using fullstack public app URL for Reflex API: {app_url}", flush=True)
+    generate_crawler_assets()
+
     from reflex import constants
     from reflex.constants.base import RunningMode
     from reflex.reflex import _run

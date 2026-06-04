@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -10,8 +11,28 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 import reflex as rx
 from reflex.plugins.sitemap import SitemapPlugin
 
+os.environ.setdefault("REFLEX_SSR", "true")
+os.environ.setdefault("REFLEX_SOCKET_MAX_HTTP_BUFFER_SIZE", "50000000")
+
 _IN_CONTAINER = os.path.exists("/.dockerenv") or os.environ.get("container") == "podman"
-_vite_hosts: list[str] | bool = True if _IN_CONTAINER else ["lite.just-dna.life"]
+
+
+def _configured_hosts() -> list[str] | bool:
+    if _IN_CONTAINER:
+        return True
+
+    hosts = {"lite.just-dna.life"}
+    for env_name in ("DEPLOY_URL", "PUBLIC_APP_URL"):
+        parsed = urlparse(os.environ.get(env_name, "").strip())
+        if parsed.hostname:
+            hosts.add(parsed.hostname)
+    extra_hosts = os.environ.get("VITE_ALLOWED_HOSTS", "").strip()
+    if extra_hosts:
+        hosts.update(host.strip() for host in extra_hosts.split(",") if host.strip())
+    return sorted(hosts)
+
+
+_vite_hosts = _configured_hosts()
 
 config = rx.Config(
     app_name="webui",

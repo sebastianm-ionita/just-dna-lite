@@ -178,7 +178,7 @@ def topbar() -> rx.Component:
         rx.el.div(
             rx.el.a(
                 rx.el.img(
-                    src="/just_dna_seq.jpg",
+                    src="/images/just_dna_seq.jpg",
                     style={"height": "40px", "width": "auto", "marginRight": "12px"},
                 ),
                 rx.el.span(

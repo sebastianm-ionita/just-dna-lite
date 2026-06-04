@@ -13,6 +13,7 @@ from typing import NamedTuple
 import reflex as rx
 
 from webui.components.layout import template, fomantic_icon
+from webui.crawler_assets import page_image_url, page_meta
 from webui.state import UploadState
 
 
@@ -186,7 +187,13 @@ def _faq_content() -> rx.Component:
     )
 
 
-@rx.page(route="/faq", title="FAQ | Just DNA Lite", on_load=UploadState.on_load)
+@rx.page(
+    route="/faq",
+    title="FAQ | Just DNA Lite",
+    on_load=UploadState.on_load,
+    meta=page_meta("/faq"),
+    image=page_image_url(),
+)
 def faq_page() -> rx.Component:
     """FAQ page."""
     return template(_faq_content())

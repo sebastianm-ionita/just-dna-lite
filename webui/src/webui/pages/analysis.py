@@ -3,9 +3,15 @@ from __future__ import annotations
 import reflex as rx
 
 from webui.components.layout import template, fomantic_icon
+from webui.crawler_assets import page_image_url, page_meta
 
 
-@rx.page(route="/analysis", title="Analysis | Just DNA Lite")
+@rx.page(
+    route="/analysis",
+    title="Analysis | Just DNA Lite",
+    meta=page_meta("/analysis"),
+    image=page_image_url(),
+)
 def analysis_page() -> rx.Component:
     """Analysis page using Fomantic UI styling."""
     return template(

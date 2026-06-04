@@ -42,7 +42,7 @@ from just_dna_pipelines.module_registry import (
     refresh_module_registry,
 )
 from reflex_mui_datagrid import LazyFrameGridMixin, extract_vcf_descriptions, scan_file
-from webui.deployment_urls import resolve_dagster_web_public_url
+from webui.deployment_urls import resolve_dagster_web_public_url, resolve_public_backend_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -52,18 +52,11 @@ GENERATED_MODULES_DIR: Path = get_generated_modules_dir()
 def _backend_api_url() -> str:
     """Return the browser-reachable Reflex backend URL for custom API routes.
 
-    In production FULLSTACK mode, returns empty string (relative URLs work
-    since frontend and backend share the same port).  For explicit
-    deployments behind a reverse proxy, set ``PUBLIC_BACKEND_URL`` or
-    ``API_URL``.
+    In production FULLSTACK mode, ``DEPLOY_URL``/``PUBLIC_APP_URL`` is enough
+    because frontend and backend share one origin.  ``PUBLIC_BACKEND_URL`` is
+    still available for explicit split-backend deployments.
     """
-    pub = os.environ.get("PUBLIC_BACKEND_URL", "").strip()
-    if pub:
-        return pub.rstrip("/")
-    api = os.environ.get("API_URL", "").strip()
-    if api:
-        return api.rstrip("/")
-    return ""
+    return resolve_public_backend_base_url(8000)
 
 
 # Module metadata with titles, descriptions, and icons
