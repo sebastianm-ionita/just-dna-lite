@@ -3302,7 +3302,37 @@ _PRS_REQUIRED_SCORE_COLUMNS = {
     "scoring_parquet_filename",
     "scoring_parquet_path",
 }
+_PRS_CORRUPT_PARQUET_MARKERS = (
+    "out of specification",
+    "invalid thrift",
+    "metadata size",
+    "footer",
+    "not a parquet",
+)
 _prs_cache_checked = False
+
+
+def _is_prs_corrupt_parquet_error(exc: BaseException) -> bool:
+    """Return whether an exception looks like a corrupt PRS parquet cache read."""
+    message = f"{type(exc).__name__}: {exc}".casefold()
+    return "parquet" in message and any(marker in message for marker in _PRS_CORRUPT_PARQUET_MARKERS)
+
+
+def _remove_prs_score_parquet_cache(pgs_id: str, cache_dir: Path, genome_build: str) -> bool:
+    """Remove the cached scoring parquet for one PGS ID so just-prs can re-fetch it."""
+    parquet_path = cache_dir / f"{pgs_id}_hmPOS_{genome_build}.parquet"
+    if not parquet_path.exists():
+        return False
+    parquet_path.unlink(missing_ok=True)
+    logger.warning("Removed corrupt PRS scoring cache: %s", parquet_path)
+    return True
+
+
+def _remove_prs_metadata_cache(cache_dir: Path) -> None:
+    """Remove PRS metadata parquets so PRSCatalog can rebuild or pull them again."""
+    metadata_dir = cache_dir / "metadata"
+    for name in ("scores.parquet", "performance.parquet", "best_performance.parquet", "publications.parquet"):
+        (metadata_dir / name).unlink(missing_ok=True)
 
 
 def _prs_scores_cache_is_stale(cache_dir: Path) -> bool:
@@ -3310,7 +3340,14 @@ def _prs_scores_cache_is_stale(cache_dir: Path) -> bool:
     scores_path = cache_dir / "metadata" / "scores.parquet"
     if not scores_path.exists():
         return False
-    schema = pl.scan_parquet(scores_path).collect_schema()
+    try:
+        schema = pl.scan_parquet(scores_path).collect_schema()
+    except Exception as exc:
+        if _is_prs_corrupt_parquet_error(exc):
+            logger.warning("PRS score metadata cache is corrupt; refreshing: %s", scores_path)
+            _remove_prs_metadata_cache(cache_dir)
+            return True
+        raise
     return not _PRS_REQUIRED_SCORE_COLUMNS.issubset(set(schema.names()))
 
 
@@ -3385,6 +3422,50 @@ def _compute_single_prs(
     row = _prs_enriched_to_row_dict(enriched)
     row["_low_match"] = result.match_rate < 0.1
     return row
+
+
+def _compute_single_prs_with_cache_repair(
+    pgs_id: str,
+    vcf_path: str,
+    genome_build: str,
+    cache_dir: Path,
+    genotypes_lf: Optional[pl.LazyFrame],
+    catalog: _PRSCatalog,
+    best_perf_df: pl.DataFrame,
+    ancestry: str,
+    compute_all_populations: bool = False,
+) -> Dict[str, Any]:
+    """Compute one PRS, repairing a corrupt local scoring parquet and retrying once."""
+    try:
+        return _compute_single_prs(
+            pgs_id=pgs_id,
+            vcf_path=vcf_path,
+            genome_build=genome_build,
+            cache_dir=cache_dir,
+            genotypes_lf=genotypes_lf,
+            catalog=catalog,
+            best_perf_df=best_perf_df,
+            ancestry=ancestry,
+            compute_all_populations=compute_all_populations,
+        )
+    except Exception as exc:
+        if not _is_prs_corrupt_parquet_error(exc):
+            raise
+        removed = _remove_prs_score_parquet_cache(pgs_id, cache_dir, genome_build)
+        if not removed:
+            raise
+        logger.warning("Retrying PRS compute for %s after removing corrupt cache", pgs_id)
+        return _compute_single_prs(
+            pgs_id=pgs_id,
+            vcf_path=vcf_path,
+            genome_build=genome_build,
+            cache_dir=cache_dir,
+            genotypes_lf=genotypes_lf,
+            catalog=catalog,
+            best_perf_df=best_perf_df,
+            ancestry=ancestry,
+            compute_all_populations=compute_all_populations,
+        )
 
 
 class PRSState(PRSComputeStateMixin, LazyFrameGridMixin, rx.State):
@@ -3571,7 +3652,7 @@ class PRSState(PRSComputeStateMixin, LazyFrameGridMixin, rx.State):
                 try:
                     row = await loop.run_in_executor(
                         None,
-                        lambda pid=pgs_id: _compute_single_prs(
+                        lambda pid=pgs_id: _compute_single_prs_with_cache_repair(
                             pgs_id=pid,
                             vcf_path=vcf_path,
                             genome_build=genome_build,
