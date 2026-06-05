@@ -168,6 +168,7 @@ class EnsemblSource(BaseModel):
 class DefaultSample(BaseModel):
     """A pre-configured public genome sample for immutable mode."""
     zenodo_url: str
+    filename: str = ""
     label: str
     subject_id: str = ""
     sex: str = "N/A"

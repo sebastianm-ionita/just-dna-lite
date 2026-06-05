@@ -141,6 +141,7 @@ Immutable mode disables file uploads and serves only pre-configured public genom
 ### Important patterns
 
 - **Never hardcode Zenodo URLs in Python** — use `get_immutable_config().default_samples`
+- **Default samples should include `filename`** — startup resolves `data/input/users/public/` and the Zenodo cache before any network call; without `filename`, record URLs require a Zenodo metadata request.
 - **`is_immutable_mode()`** checks env var first, then YAML `enabled` flag
 - **`validate_zenodo_record()`** verifies open access, permissive license, and VCF presence before any download
 - **Zenodo metadata is tracked in Dagster** — `source: "zenodo"`, `zenodo_url`, `zenodo_doi`, `zenodo_license`, `zenodo_creator` on `user_vcf_source` materialization

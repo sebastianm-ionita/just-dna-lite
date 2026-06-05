@@ -11,11 +11,15 @@ import shutil
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote
 
 import requests
 from platformdirs import user_cache_dir
 
-logger = logging.getLogger(__name__)
+from just_dna_pipelines.module_config import get_immutable_config
+
+LOGGER = logging.getLogger(__name__)
+logger = LOGGER
 
 PERMISSIVE_LICENSES = {
     "cc-zero", "cc0-1.0", "cc-by-4.0", "cc-by-sa-4.0",
@@ -192,32 +196,45 @@ def download_vcf_from_zenodo(
     Downloaded files are cached in ``~/.cache/just-dna-pipelines/zenodo/``
     and are not re-downloaded on subsequent calls.
     """
-    from just_dna_pipelines.annotation.resources import logger as _module_logger
-    _log = logger or _module_logger
+    _log = logger or LOGGER
 
     cache_dir = get_cache_dir() / "zenodo"
     cache_dir.mkdir(parents=True, exist_ok=True)
 
+    if filename:
+        cached_vcf_path = cache_dir / filename
+        if cached_vcf_path.exists():
+            _log.info(f"Using cached VCF from Zenodo: {cached_vcf_path}")
+            return cached_vcf_path
+
     if "/records/" in zenodo_url and "/files/" not in zenodo_url:
         record_id = zenodo_url.split("/records/")[-1].split("?")[0].split("/")[0]
-        api_url = f"https://zenodo.org/api/records/{record_id}"
 
-        _log.info(f"Fetching Zenodo record metadata: {api_url}")
+        if filename:
+            download_url = (
+                f"https://zenodo.org/api/records/{record_id}/files/"
+                f"{quote(filename, safe='')}/content"
+            )
+            resolved_filename = filename
+        else:
+            api_url = f"https://zenodo.org/api/records/{record_id}"
 
-        response = requests.get(api_url, timeout=15)
-        response.raise_for_status()
-        data = response.json()
+            _log.info(f"Fetching Zenodo record metadata: {api_url}")
 
-        vcf_file = next(
-            (f for f in data["files"]
-             if f["key"].endswith(".vcf") or f["key"].endswith(".vcf.gz")),
-            None,
-        )
-        if not vcf_file:
-            raise ValueError(f"No VCF file found in Zenodo record {record_id}")
+            response = requests.get(api_url, timeout=15)
+            response.raise_for_status()
+            data = response.json()
 
-        download_url = vcf_file["links"]["self"]
-        resolved_filename = filename or vcf_file["key"]
+            vcf_file = next(
+                (f for f in data["files"]
+                 if f["key"].endswith(".vcf") or f["key"].endswith(".vcf.gz")),
+                None,
+            )
+            if not vcf_file:
+                raise ValueError(f"No VCF file found in Zenodo record {record_id}")
+
+            download_url = vcf_file["links"]["self"]
+            resolved_filename = vcf_file["key"]
     else:
         download_url = zenodo_url
         if filename:
@@ -246,6 +263,27 @@ def download_vcf_from_zenodo(
     _log.info(f"Downloaded VCF: {vcf_path} ({size_mb:.1f} MB)")
 
     return vcf_path
+
+
+def _cached_default_sample_path(sample: Any, user_input_dir: Path, cache_dir: Path) -> Path | None:
+    """Find a cached default sample without calling Zenodo."""
+    identifiers = [
+        value.lower()
+        for value in (getattr(sample, "filename", ""), sample.subject_id, sample.label)
+        if value
+    ]
+    search_dirs = [user_input_dir, cache_dir / "zenodo"]
+
+    for directory in search_dirs:
+        if not directory.exists():
+            continue
+
+        for path in list(directory.glob("*.vcf")) + list(directory.glob("*.vcf.gz")):
+            path_name = path.name.lower()
+            if any(identifier in path_name for identifier in identifiers):
+                return path
+
+    return None
 
 
 def ensure_vcf_in_user_input_dir(
@@ -374,15 +412,34 @@ def resolve_default_samples(
     Returns a list of dicts with ``path`` (Path) and all sample metadata fields.
     Already-cached files are not re-downloaded.
     """
-    from just_dna_pipelines.module_config import get_immutable_config
-
     _log = log or logger
     config = get_immutable_config()
     results: list[dict[str, Any]] = []
 
     for sample in config.default_samples:
-        vcf_path = download_vcf_from_zenodo(sample.zenodo_url, logger=_log)
-        placed = ensure_vcf_in_user_input_dir(vcf_path, user_name, _log)
+        user_input_dir = get_user_input_dir() / user_name
+        placed: Path | None = None
+
+        cached_sample = _cached_default_sample_path(sample, user_input_dir, get_cache_dir())
+        if cached_sample is not None:
+            if cached_sample.parent == user_input_dir:
+                _log.info(f"Using existing default sample in user input directory: {cached_sample}")
+                placed = cached_sample
+            else:
+                placed = ensure_vcf_in_user_input_dir(cached_sample, user_name, _log)
+
+        if placed is None:
+            try:
+                vcf_path = download_vcf_from_zenodo(
+                    sample.zenodo_url,
+                    filename=sample.filename or None,
+                    logger=_log,
+                )
+                placed = ensure_vcf_in_user_input_dir(vcf_path, user_name, _log)
+            except (requests.RequestException, ValueError, OSError) as exc:
+                _log.warning(f"Could not resolve default sample {sample.label}: {exc}")
+                continue
+
         results.append({
             "path": placed,
             "filename": placed.name,

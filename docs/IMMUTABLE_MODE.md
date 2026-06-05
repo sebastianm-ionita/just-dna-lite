@@ -39,6 +39,7 @@ immutable_mode:
   disclaimer: "This is a public demo..."  # shown in topbar tooltip and left panel
   default_samples:
     - zenodo_url: "https://zenodo.org/records/18370498"
+      filename: "antonkulaga.vcf"
       label: "Anton Kulaga"
       subject_id: "antonkulaga"
       sex: "Male"
@@ -46,6 +47,7 @@ immutable_mode:
       reference_genome: "GRCh38"
       license: "CC-Zero"
     - zenodo_url: "https://zenodo.org/records/19487816"
+      filename: "SIMHIFQTILQ.hard-filtered.vcf.gz"
       label: "Livia Zaharia"
       subject_id: "SIMHIFQTILQ"
       sex: "Female"
@@ -65,7 +67,7 @@ immutable_mode:
 ## How it works
 
 1. On first page load, `on_load()` detects immutable mode and calls `resolve_default_samples()`.
-2. Each default sample is downloaded from Zenodo (cached in `~/.cache/just-dna-pipelines/zenodo/`) and placed in `data/input/users/public/`.
+2. Each default sample is resolved cache-first: `data/input/users/public/`, then `~/.cache/just-dna-pipelines/zenodo/`, then Zenodo only if needed.
 3. All users share the `public` user identity — no login, no per-user directories.
 4. The upload form is replaced with a disclaimer box and "Install locally" link.
 5. A "Public Demo" badge appears in the topbar next to the Medical Disclaimer.
@@ -79,7 +81,7 @@ To add a new public genome to the demo:
    - `access_right: "open"`
    - A permissive license (CC-Zero, CC-BY, CC-BY-SA, etc.)
    - A `.vcf` or `.vcf.gz` file
-2. Add a new entry under `immutable_mode.default_samples` in `modules.yaml`
+2. Add a new entry under `immutable_mode.default_samples` in `modules.yaml`; include `filename` so startup can hit the local cache without querying Zenodo metadata.
 3. Restart the server — the new genome will be auto-downloaded on first access
 
 ## Zenodo import (normal mode)
