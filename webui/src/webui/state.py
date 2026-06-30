@@ -3690,7 +3690,11 @@ class PRSState(PRSComputeStateMixin, LazyFrameGridMixin, rx.State):
         self.prs_view_mode = "grouped" if mode == "traits" else "individual"
         if mode == "individual" and self.selected_pgs_ids:
             self._sync_loaded_grid_selection(self.selected_pgs_ids)
-        if mode == "traits" and self.prs_results and not self.trait_summary_rows:
+        # Always rebuild on switch to traits so the grouped view reflects the
+        # CURRENT prs_results — never a stale cached snapshot. Guarding on
+        # "not self.trait_summary_rows" previously froze the view (e.g. at 13
+        # models) once any summary existed, even after more scores computed.
+        if mode == "traits" and self.prs_results:
             self.build_trait_summary()
 
     def sync_trait_pgs_ids(self, ids: list[str]) -> None:
@@ -3956,6 +3960,15 @@ class PRSState(PRSComputeStateMixin, LazyFrameGridMixin, rx.State):
                     self._build_prs_results_grid()
                     self.low_match_warning = any_low_match
                     self._checkpoint_prs_to_dagster()
+                    # Invalidate + rebuild the trait summary on EACH added score so
+                    # the grouped view tracks computed scores live instead of caching
+                    # a stale snapshot (e.g. "13 models" while the rest stream in).
+                    # Only meaningful in grouped mode; the mode switch rebuilds too.
+                    if self.prs_selection_mode == "traits" or self.prs_view_mode == "grouped":
+                        try:
+                            self.build_trait_summary()
+                        except Exception as summary_exc:
+                            logger.warning("Incremental trait summary rebuild failed: %s", summary_exc)
                 gc.collect()
 
             async with self:
