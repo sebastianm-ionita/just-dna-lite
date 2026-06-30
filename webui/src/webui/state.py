@@ -3944,13 +3944,21 @@ class PRSState(PRSComputeStateMixin, LazyFrameGridMixin, rx.State):
                 if row.pop("_low_match", False):
                     any_low_match = True
                 new_results.append(row)
+
+                # Persist per-score (by-readiness), not once at the end. By-trait
+                # selects many scores in a single call, so an end-of-loop-only
+                # checkpoint loses every computed score if the Nth one — or the
+                # trait-summary build — crashes. Update + checkpoint after each
+                # score so completed work always survives.
+                async with self:
+                    existing_by_id[pgs_id] = row
+                    self.prs_results = list(existing_by_id.values())
+                    self._build_prs_results_grid()
+                    self.low_match_warning = any_low_match
+                    self._checkpoint_prs_to_dagster()
                 gc.collect()
 
             async with self:
-                for r in new_results:
-                    pid = r.get("pgs_id", "")
-                    if pid:
-                        existing_by_id[pid] = r
                 merged = list(existing_by_id.values())
                 self.prs_results = merged
                 self._build_prs_results_grid()
@@ -3963,8 +3971,19 @@ class PRSState(PRSComputeStateMixin, LazyFrameGridMixin, rx.State):
                     parts.append(f"{len(failed_ids)} failed: {', '.join(failed_ids[:5])}")
                 self.status_message = "Computed " + "; ".join(parts)
                 self._checkpoint_prs_to_dagster()
+                # Build the trait summary in isolation: the per-score results are
+                # already persisted above, so a summary/UI failure must never
+                # discard them — surface a notice instead of losing the run.
                 if self.prs_results:
-                    self.build_trait_summary()
+                    try:
+                        self.build_trait_summary()
+                    except Exception as summary_exc:
+                        logger.error(
+                            "Trait summary build failed (per-score results preserved): %s",
+                            summary_exc,
+                            exc_info=True,
+                        )
+                        self.status_message += " — trait summary unavailable (results saved)"
         except Exception as exc:
             logger.error("PRS computation failed: %s", exc, exc_info=True)
             async with self:

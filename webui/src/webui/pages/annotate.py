@@ -267,10 +267,14 @@ PRS_ALIGNMENT_CSS = """
 }
 
 #segment-prs .prs-control-row .prs-select-trigger,
+#segment-prs .prs-control-group .prs-select-trigger {
+    line-height: 26px !important;
+    text-align: center !important;
+}
+
 #segment-prs .prs-control-row .prs-select-trigger *,
-#segment-prs .prs-control-group .prs-select-trigger,
 #segment-prs .prs-control-group .prs-select-trigger * {
-    line-height: 1 !important;
+    line-height: 26px !important;
     vertical-align: middle !important;
 }
 
@@ -3233,7 +3237,7 @@ def _prs_genome_control_row() -> rx.Component:
                     "minHeight": "26px",
                     "paddingTop": "0",
                     "paddingBottom": "0",
-                    "lineHeight": "1",
+                    "lineHeight": "26px",
                 },
             ),
             rx.select.content(
@@ -3321,7 +3325,7 @@ def _prs_engine_control() -> rx.Component:
                     "minHeight": "26px",
                     "paddingTop": "0",
                     "paddingBottom": "0",
-                    "lineHeight": "1",
+                    "lineHeight": "26px",
                 },
             ),
             rx.select.content(
