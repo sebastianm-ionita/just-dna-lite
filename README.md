@@ -118,7 +118,9 @@ The first launch takes 1-3 minutes (it downloads Python and dependencies automat
 
 ### Install from source (Python)
 
-If you're comfortable with a terminal, this is the fastest way to get started. Open a terminal (Terminal on macOS, PowerShell on Windows, any terminal on Linux) and run the commands below. You'll need [git](https://git-scm.com/downloads) installed.
+If you're comfortable with a terminal, this is the fastest way to get started. Open a terminal (Terminal on macOS, PowerShell on Windows, any terminal on Linux) and run the commands below.
+
+You'll need **git** installed. macOS and most Linux distributions already have it. Windows does not ship with git unless you've set it up as a developer — if `git --version` fails, install it from [git-scm.com/install/windows](https://git-scm.com/install/windows) and restart your terminal.
 
 First, install [uv](https://github.com/astral-sh/uv) — a tool that manages Python and all dependencies for you automatically:
 
@@ -129,6 +131,16 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # Windows (PowerShell)
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
+
+> **Restart your terminal after installing uv.** The installer adds `uv` to your `PATH`, but the change only takes effect in a new shell. Close the terminal and open a fresh one before continuing, otherwise `uv` won't be recognized.
+
+Next, install Python 3.13 with uv. This is a self-contained local download managed by uv — it won't touch any system Python:
+
+```bash
+uv python install 3.13
+```
+
+This step is required on Windows (which ships without Python) and recommended on macOS and Linux to guarantee you're on a supported version.
 
 Then clone and run:
 
