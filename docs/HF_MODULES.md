@@ -48,6 +48,7 @@ Modules are auto-discovered from configured sources. Run `uv run pipelines list-
 | `vo2max` | Athletic performance and VO2max-associated variants |
 | `superhuman` | Elite performance and rare beneficial variants |
 | `coronary` | Coronary artery disease associations |
+| `thrombophilia` | Inherited blood-clotting risk variants (Factor V Leiden, prothrombin, related loci) |
 | `drugs` | Pharmacogenomic annotations (PharmGKB) |
 
 ---

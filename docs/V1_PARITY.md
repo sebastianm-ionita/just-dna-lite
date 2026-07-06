@@ -16,7 +16,7 @@ variant-backed modules from that canonical source; this plan covers the rest.
 | `just_vo2max` | vo2max | `vo2max.sqlite` | ✅ compiled | ✅ | **full** — 13/13 match HF |
 | `just_lipidmetabolism` | lipidmetabolism | `lipid_metabolism.sqlite` | ✅ compiled | ✅ | **full** — 15/15 match HF |
 | `just_longevitymap` | longevitymap | `longevitymap.sqlite` | ✅ compiled | ✅ | **near-full** — 518/528 rsids (10 het-only rsids unresolved, below) |
-| `just_thrombophilia` | thrombophilia | `thrombophilia.sqlite` | ✅ compiled | ❌ | **new** — not previously on HF; ready to publish |
+| `just_thrombophilia` | thrombophilia | `thrombophilia.sqlite` | ✅ compiled | ✅ (published 2026-07) | **full** — newly published to the collection |
 | `just_superhuman` | superhuman | `superhuman.sqlite` | ⚠️ variants only | ✅ | **blocked** — no PMIDs in source (below) |
 | `just_lnewco` | lnewco (APOE) | `metabolic_genotype.sqlite` | ❌ | ❌ | **gap** — diplotype schema needed |
 | `just_cardio` | cardio | `genes.txt` | ❌ | ❌ | **gap** — ClinVar gene-panel type |
@@ -30,10 +30,10 @@ artifacts almost exactly — validating both the port and the HF data.
 
 ## Work items to reach parity
 
-### 1. Publish `thrombophilia` (small, ready now)
-The port compiles cleanly (25 variants, 29 studies, integer `pubmed_id` grounding). Only action:
-upload `data/interim/v1_port/thrombophilia/` to the `just-dna-seq/annotators` collection and add
-display metadata to `modules.yaml` (`module_metadata.thrombophilia`). No new schema work.
+### 1. Publish `thrombophilia` — ✅ done (2026-07)
+Published to `just-dna-seq/annotators/data/thrombophilia/` via `pipelines v1-port publish
+thrombophilia`; `module_metadata.thrombophilia` added to `modules.yaml`. It is now auto-discovered and
+part of the default module set. Re-publish (or publish other readied modules) with the same command.
 
 ### 2. Close the longevitymap het-allele gap (10 rsids)
 284 `allele_weights` rows were skipped, dropping 10 rsids that appear only as heterozygous entries

@@ -63,7 +63,7 @@ Each module is a curated database of genetic variants with effect weights from p
 
 ### Which modules can I run on my genome?
 
-The tool ships with five expert-curated modules: **Longevity Map** (variant-trait associations from the LongevityMap database), **Coronary Artery Disease**, **Lipid Metabolism**, **VO2 Max**, and **Athletic Performance (Superhuman)**. These were created with the expert curation of geneticist Olga Borysova. More modules can be added by hand or generated with the AI Module Creator.
+The tool ships with six expert-curated modules: **Longevity Map** (variant-trait associations from the LongevityMap database), **Coronary Artery Disease**, **Lipid Metabolism**, **VO2 Max**, **Athletic Performance (Superhuman)**, and **Thrombophilia** (inherited blood-clotting risk variants). These come from the expert curation of geneticist Olga Borysova. More modules can be added by hand or generated with the AI Module Creator.
 
 ### What does turning on Ensembl annotation give me?
 
