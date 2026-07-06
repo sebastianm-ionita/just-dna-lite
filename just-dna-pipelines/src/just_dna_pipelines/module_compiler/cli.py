@@ -232,7 +232,7 @@ def module_compile(
     resolve: bool = typer.Option(
         True,
         "--resolve/--no-resolve",
-        help="Resolve missing rsid/position via Ensembl DuckDB (auto-downloads if needed).",
+        help="Resolve missing rsid/position via the local Ensembl DuckDB (skipped if absent).",
     ),
     ensembl_cache: Optional[Path] = typer.Option(
         None,
@@ -250,8 +250,10 @@ def module_compile(
     studies.parquet in the output directory.
 
     By default, resolves missing rsid/position fields via the local Ensembl
-    DuckDB (GRCh38). The DuckDB is auto-built from the Ensembl parquet cache;
-    if the cache is missing it is downloaded from HuggingFace Hub.
+    DuckDB (GRCh38), built from the Ensembl parquet cache. Compilation uses the
+    published inject-only just-dna-compiler: if no cache is present (and none is
+    passed via --ensembl-cache), resolution is skipped with a warning rather than
+    downloading. Provision the cache beforehand (Dagster Ensembl asset) to resolve.
 
     Examples:
 

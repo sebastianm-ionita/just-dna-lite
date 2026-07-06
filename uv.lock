@@ -1827,6 +1827,35 @@ wheels = [
 ]
 
 [[package]]
+name = "just-dna-compiler"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "duckdb" },
+    { name = "just-dna-format" },
+    { name = "platformdirs" },
+    { name = "polars" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/27/f826bc92c293aaf8136f909a7f93672ad73af4d6f2201897ca12165750af/just_dna_compiler-0.1.0.tar.gz", hash = "sha256:5935e1642370ddd2a5a59768f81cf210bd071ae51a724740456642e85d55df82", size = 11389, upload-time = "2026-07-06T18:40:09.754Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d8/47/ab6f224a691b0d56dab79f4c9644abc6e604c1fab6d0dabbb5ab6fd1b006/just_dna_compiler-0.1.0-py3-none-any.whl", hash = "sha256:9179a7f791ba02933f92433fdd4b2b73ff7a0582ad69ebdb5e6a36d684ce6f10", size = 13829, upload-time = "2026-07-06T18:40:06.177Z" },
+]
+
+[[package]]
+name = "just-dna-format"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e0/6b/581b8666175fe6fe9264393f2826405b247ea84306addebf4fb83668696c/just_dna_format-0.1.0.tar.gz", hash = "sha256:6b1b1a512bb0f342f4226b8ba231212c01b6371475c52b6b02c1951d1503393e", size = 8805, upload-time = "2026-07-06T18:40:08.958Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/01/c5/c541598dbdefdc415e873cb83cc04a1e41787eb50464dcfb9c414d98dce2/just_dna_format-0.1.0-py3-none-any.whl", hash = "sha256:d44cc551bd070c51e36585b6fac5f333ee0de1199c7584346d856278380d92b6", size = 11697, upload-time = "2026-07-06T18:40:07.581Z" },
+]
+
+[[package]]
 name = "just-dna-lite"
 version = "0.3.10"
 source = { editable = "." }
@@ -1880,6 +1909,8 @@ dependencies = [
     { name = "fsspec" },
     { name = "google-genai" },
     { name = "huggingface-hub" },
+    { name = "just-dna-compiler" },
+    { name = "just-dna-format" },
     { name = "mcp" },
     { name = "numpy" },
     { name = "openai" },
@@ -1921,6 +1952,8 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2026.2.0" },
     { name = "google-genai", specifier = ">=1.71.0,<2.0" },
     { name = "huggingface-hub", specifier = ">=1.10.0" },
+    { name = "just-dna-compiler", specifier = ">=0.1.0" },
+    { name = "just-dna-format", specifier = ">=0.1.0" },
     { name = "mcp", specifier = ">=1.27.0" },
     { name = "numpy", specifier = ">=2.4.3" },
     { name = "openai", specifier = ">=2.31.0" },

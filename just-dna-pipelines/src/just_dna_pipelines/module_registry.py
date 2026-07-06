@@ -29,6 +29,7 @@ from eliot import log_message
 
 from just_dna_pipelines.module_compiler import CompilationResult, ModuleSpecConfig, ValidationResult, validate_spec
 from just_dna_pipelines.module_compiler.compiler import compile_module
+from just_dna_pipelines.module_compiler.resolver import ensure_resolver_db
 from just_dna_pipelines.annotation.resources import get_registered_modules_dir
 from just_dna_pipelines.module_config import (
     ModuleMetadata,
@@ -125,6 +126,20 @@ def register_custom_module(
     module_name = spec_config.module.name
     output_dir = CUSTOM_MODULES_DIR / module_name
 
+    # just-dna-compiler is inject-only (it never downloads a reference), so provision the Ensembl
+    # DuckDB here and pass it in. ensure_resolver_db is idempotent — cheap when the cache already
+    # exists, building/downloading only when absent. On failure, degrade to inject-only: compile
+    # skips resolution with a warning rather than erroring.
+    if resolve_with_ensembl and ensembl_cache is None:
+        try:
+            ensembl_cache = ensure_resolver_db()
+        except Exception as exc:  # noqa: BLE001 - provisioning is best-effort
+            log_message(
+                message_type="ensembl_provision_failed",
+                module=module_name,
+                error=str(exc),
+            )
+
     result = compile_module(
         spec_dir,
         output_dir,
@@ -138,7 +153,7 @@ def register_custom_module(
     # loaded back into the editing slot for further editing.
     # Exclude parquets
     # (already written by compile_module).
-    _SPEC_SUFFIXES = {".yaml", ".csv", ".md", ".png", ".jpg", ".jpeg", ".log"}
+    _SPEC_SUFFIXES = {".yaml", ".csv", ".md", ".png", ".jpg", ".jpeg", ".log", ".json"}
     for f in spec_dir.iterdir():
         if f.is_file() and f.suffix.lower() in _SPEC_SUFFIXES:
             shutil.copy2(f, output_dir / f.name)

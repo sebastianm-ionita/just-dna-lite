@@ -254,16 +254,17 @@ class TestValidation:
         result = validate_spec(MTHFR_DIR)
         assert result.valid, f"Validation errors: {result.errors}"
         assert result.stats["unique_rsids"] == 8
-        assert result.stats["unique_genes"] == 7
+        # just-dna-compiler renamed stats keys: unique_genes -> gene_count, study_rows -> study_count.
+        assert result.stats["gene_count"] == 7
         assert "methylation" in result.stats["categories"]
-        assert result.stats["study_rows"] > 0
+        assert result.stats["study_count"] > 0
 
     def test_cyp_valid(self) -> None:
         result = validate_spec(CYP_DIR)
         assert result.valid, f"Validation errors: {result.errors}"
         assert result.stats["unique_rsids"] == 7
         assert result.stats["module_name"] == "cyp_panel"
-        assert result.stats["study_rows"] > 0
+        assert result.stats["study_count"] > 0
 
     def test_nonexistent_dir(self) -> None:
         result = validate_spec(Path("/nonexistent/path"))
