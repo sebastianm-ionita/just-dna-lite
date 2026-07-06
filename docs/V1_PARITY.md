@@ -8,25 +8,34 @@ Gen-I modules were OakVar *postaggregators*, one `just_*` repo per module in the
 file. Stage 1 (see `just_dna_pipelines.v1_port` and `data/interim/v1_port/`) reproducibly ports the
 variant-backed modules from that canonical source; this plan covers the rest.
 
+## Where they're published
+
+The **module marketplace** (`https://module-marketplace.just-dna.life`, namespace `just-dna-seq`) is
+now the primary store; publish via `pipelines marketplace publish just-dna-seq <name> <version>
+data/interim/v1_port/<name>`. The HuggingFace collection (`just-dna-seq/annotators`) is **legacy** and
+will be retired after the marketplace migration; it's kept in sync for now via `pipelines v1-port
+publish <name>`. All six variant-backed modules are live on both at **1.0.0**.
+
 ## Status overview
 
-| Gen-I repo | Module | Data | Ported to `v1_port/`? | On HuggingFace? | Parity |
+| Gen-I repo | Module | Data | Ported to `v1_port/`? | Published (marketplace + HF) | Parity |
 |---|---|---|---|---|---|
-| `just_coronary` | coronary | `coronary.sqlite` | ✅ compiled | ✅ | **full** — 27/27 rsids match HF |
-| `just_vo2max` | vo2max | `vo2max.sqlite` | ✅ compiled | ✅ | **full** — 13/13 match HF |
-| `just_lipidmetabolism` | lipidmetabolism | `lipid_metabolism.sqlite` | ✅ compiled | ✅ | **full** — 15/15 match HF |
-| `just_longevitymap` | longevitymap | `longevitymap.sqlite` | ✅ compiled | ✅ | **near-full** — 518/528 rsids (10 het-only rsids unresolved, below) |
-| `just_thrombophilia` | thrombophilia | `thrombophilia.sqlite` | ✅ compiled | ✅ (published 2026-07) | **full** — newly published to the collection |
-| `just_superhuman` | superhuman | `superhuman.sqlite` | ✅ compiled (subset) | ✅ (marketplace v1.0.0) | **partial** — v1 grounded on the 2 in-source verified PMIDs; full curation + refresh = v2 |
+| `just_coronary` | coronary | `coronary.sqlite` | ✅ compiled | ✅ 1.0.0 | **full** — 27/27 rsids match HF |
+| `just_vo2max` | vo2max | `vo2max.sqlite` | ✅ compiled | ✅ 1.0.0 | **full** — 13/13 match HF |
+| `just_lipidmetabolism` | lipidmetabolism | `lipid_metabolism.sqlite` | ✅ compiled | ✅ 1.0.0 | **full** — 15/15 match HF |
+| `just_longevitymap` | longevitymap | `longevitymap.sqlite` | ✅ compiled | ✅ 1.0.0 | **near-full** — 518/528 rsids (10 het-only rsids unresolved, below) |
+| `just_thrombophilia` | thrombophilia | `thrombophilia.sqlite` | ✅ compiled | ✅ 1.0.0 | **full** — newly published (2026-07) |
+| `just_superhuman` | superhuman | `superhuman.sqlite` | ✅ compiled (subset) | ✅ 1.0.0 (subset) | **🚧 WIP** — v1 subset live (2 verified in-source PMIDs); v2 (full grounding + Mar-2026 refresh) **in progress** |
 | `just_lnewco` | lnewco (APOE) | `metabolic_genotype.sqlite` | ❌ | ❌ | **gap** — diplotype schema needed |
 | `just_cardio` | cardio | `genes.txt` | ❌ | ❌ | **gap** — ClinVar gene-panel type |
 | `just_cancer` | cancer | `genes.txt` | ❌ | ❌ | **gap** — ClinVar gene-panel type |
 | `just_pathogenic` | pathogenic | (none) | ❌ | ❌ | **gap** — ClinVar pathogenicity type |
 | `just_drugs` | drugs | `annotation_tab.tsv` | ❌ | ❌ | **gap** — PharmGKB domain |
 
-The five modules already on HuggingFace (`just-dna-seq/annotators`) now have a **reproducible
-source-of-truth port** re-derived from their Gen-I repos, and the reproduction matches the published
-artifacts almost exactly — validating both the port and the HF data.
+The five modules previously on HuggingFace now have a **reproducible source-of-truth port**
+re-derived from their Gen-I repos, and the reproduction matches the published artifacts almost exactly
+— validating both the port and the legacy HF data. thrombophilia was newly added; superhuman is a WIP
+(v1 subset published, v2 grounding in progress).
 
 ## Work items to reach parity
 
@@ -42,12 +51,13 @@ whose ref/alt pair wasn't found in the Ensembl cache (novel/merged/multiallelic 
 - carry the original module's runtime ref lookup forward.
 Low value relative to effort — 518/528 already reproduced. Track, don't block.
 
-### 3. Ground `superhuman` with real PMIDs — v1 subset published; v2 pending
+### 3. Ground `superhuman` with real PMIDs — 🚧 v1 subset published; v2 IN PROGRESS
 Most of the source's `references` are dbSNP URLs, but a subset are real PubMed links. **v1.0.0** is
-published to the marketplace grounded on those 2 in-source, rsid-specific, PubMed-verified citations
-(APOA2 `rs5082`→17446329, APOE `rs7412`→16603077); the other 755 variants are ungrounded. The full
-literature backfill (per-gene founding PMIDs) + **March 2026 refresh** is **v2** — see
-`docs/SUPERHUMAN_REFRESH_PLAN.md` (supervised, verification-gated, never fabricates PMIDs).
+published to the marketplace + HF grounded on those 2 in-source, rsid-specific, PubMed-verified
+citations (APOA2 `rs5082`→17446329, APOE `rs7412`→16603077); the other 755 variants are ungrounded.
+The full literature backfill (per-gene founding PMIDs) + **March 2026 refresh** is **v2, now in
+progress** (separate supervised agent) — see `docs/SUPERHUMAN_REFRESH_PLAN.md` (verification-gated,
+never fabricates PMIDs). When it lands, publish as `2.0.0`.
 
 ### 4. New module type: ClinVar gene-panel (`cardio`, `cancer`, `pathogenic`)
 These three don't carry per-variant weights — they select ClinVar pathogenic variants (by gene list
@@ -71,6 +81,6 @@ variant-weight modules and never migrated from Gen I. Parity requires a PharmGKB
 new fields (drug, response, evidence level). Largest effort; scope separately.
 
 ## Suggested sequencing
-1. Publish `thrombophilia` (hours). 2. `superhuman` PMID back-fill (depends on curation capacity).
-3. ClinVar gene-panel type covering `cardio`/`cancer`/`pathogenic` in one mechanism (schema + one
-adapter). 4. APOE diplotype schema for `lnewco`. 5. PharmGKB `drugs` (separate project).
+1. ✅ Publish `thrombophilia` (done). 2. 🚧 `superhuman` v2 PMID back-fill + Mar-2026 refresh (in
+progress). 3. ClinVar gene-panel type covering `cardio`/`cancer`/`pathogenic` in one mechanism (schema
++ one adapter). 4. APOE diplotype schema for `lnewco`. 5. PharmGKB `drugs` (separate project).
