@@ -111,6 +111,58 @@ Each source can be a single module or a collection:
 
 ---
 
+## Shared Module Format & Compiler Libraries (`just-dna-format` / `just-dna-compiler`)
+
+The annotation-module **schema** (authored DSL spec + `manifest.json` contract + integrity/identity)
+and the **reference compiler** (spec directory → parquet artifact + manifest) were extracted out of
+this repo into two published libraries. **Do not re-vendor or fork them here.**
+
+- **`just-dna-format`** (`just_dna_format`, Pydantic + stdlib only):
+  - `spec` — authored DSL: `ModuleSpecConfig`, `VariantRow`, `StudyRow`, `ModuleInfo` (+ `VALID_STATES`, `VALID_CHROMOSOMES`, `RSID_PATTERN`, `ALLELE_PATTERN`, `SCHEMA_VERSION`)
+  - `manifest` — `ModuleManifest` + `Identity`/`Display`/`Stats`/`Compilation`/`FileEntry`/`Artifact`, `read_manifest`/`write_manifest`
+  - `integrity` — `sha256_file`, `artifact_digest` (Merkle root), `build_artifact`, `verify_manifest`
+  - `identity` — name/namespace rules, SemVer `Version`, `canonical_id`, legacy `vN → N.0.0`
+- **`just-dna-compiler`** (`just_dna_compiler`, adds polars/duckdb): `validate_spec`,
+  `compile_module` (emits `manifest.json` with input/artifact hashes + digest), `reverse_module`,
+  and an **inject-only** Ensembl `resolver` (never downloads a reference).
+
+These libraries are **shared by three repos**: `just-dna-lite` (this one), `just-dna-marketplace`,
+and `just-dna-agents`. Treat them as an external contract; **do not assume a symbol is unused** just
+because grep finds no consumer in this repo — the other repos may use it.
+
+### How they're wired into this repo
+- `just_dna_pipelines.module_compiler` is now a **thin re-export shim** over the libs
+  (`models.py` → `just_dna_format.spec` + `just_dna_compiler.models`; `compiler.py` →
+  `just_dna_compiler.compiler`). Prefer importing from the libs directly in new code.
+- **Ensembl provisioning stays local** (the only non-shim piece): `module_compiler/resolver.py`
+  keeps `ensure_resolver_db` (HF download + DuckDB build) because the libs are inject-only.
+  `register_custom_module` and the pipelines `resolve_variants` wrapper auto-provision the cache and
+  inject it; the bare `compile_module` re-export and the `pipelines module compile` CLI stay
+  inject-only (skip resolution with a warning if no cache is present).
+
+### Contract facts (0.1.0 libs)
+- `validate_spec().stats` keys: `variant_count`, `unique_rsids`, `gene_count`, `genes` (sorted list),
+  `categories` (sorted list), `study_count`, `module_name` — renamed from the old
+  `unique_genes`/`study_rows`/`unique_variants`.
+- `VALID_PRIORITIES` and `PMID_PATTERN` are intentionally **not** in `just_dna_format.spec` (dead
+  code in the old schema; the live study rule is only "pmid non-empty").
+
+### Working agreement: propose shared changes via the format repo's docs (don't manage that repo)
+
+When you find something that belongs in the shared schema/compiler (a bug, a missing field, a
+tightening, a parity gap), **do not edit or commit the `just-dna-format` repo** — we consume it, we
+don't own it. Just leave a note in its docs, which act as that repo's kanban intake; the format-repo
+owners pick it up as needed:
+
+- **`/data/sources/just-dna-format/docs/ROADMAP.md`** — backlog / proposed changes (kanban first
+  column: "sticking a note", handled as needed).
+- **`/data/sources/just-dna-format/docs/CHANGELOG.md`** — record cross-repo integration changes made
+  on **our** (consumer) side, so parallel agents in the other repos aren't surprised.
+
+Writing the note is the whole job on that side — do not follow it up with commits or PRs there.
+
+---
+
 ## Immutable (Public Demo) Mode
 
 See **[docs/IMMUTABLE_MODE.md](docs/IMMUTABLE_MODE.md)** for full documentation.
@@ -1131,6 +1183,7 @@ Key principles:
 ## Learned Workspace Facts
 
 - This is a multi-root uv workspace: `just-dna-lite` (main) and `just-prs` (read-only reference). Never modify files in `just-prs`. `just-prs` was developed specifically for Just-DNA-Lite but released as a standalone library. Related repos: `just-dna-lite`, `just-prs`, `reflex-mui-datagrid`, `just-biomarkers`, `dna-seq`, `prepare-annotations`.
+- The annotation-module schema + compiler live in two shared published libs — `just-dna-format` (`just_dna_format`) and `just-dna-compiler` (`just_dna_compiler`) — consumed by `just-dna-lite`, `just-dna-marketplace`, and `just-dna-agents`. We consume them (do not fork/vendor); propose changes only as notes in `/data/sources/just-dna-format/docs/{ROADMAP,CHANGELOG}.md`, never by committing to that repo. See the "Shared Module Format & Compiler Libraries" section above.
 - The project runs on Linux, macOS, native Windows, and Apple Silicon Macs. Critical native deps have working wheels; Windows scripts live in `windows/`, and the Nix workflow is `nix develop` then `uv sync` then `uv run start`.
 - The AI Module Creator uses the Agno agentic framework, which allows configuring OpenAI API-compatible local models (e.g., Ollama or vLLM) for complete privacy.
 - Images for README live in `images/` at the project root. Use `<img>` tags (not markdown syntax) for images inside HTML `<div>` blocks.
