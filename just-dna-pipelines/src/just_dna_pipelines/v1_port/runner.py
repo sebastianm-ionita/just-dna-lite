@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from just_dna_pipelines.module_compiler.compiler import compile_module, validate_spec
 from just_dna_pipelines.v1_port.adapters import run_adapter
 from just_dna_pipelines.v1_port.clinvar import DEFAULT_CLINVAR_VCF
-from just_dna_pipelines.v1_port.sources import REGISTRY, V1Module, fetch_data_file
+from just_dna_pipelines.v1_port.sources import REGISTRY, V1Module, fetch_data_file, fetch_logo
 from just_dna_pipelines.v1_port.writer import write_spec_dir
 
 # The Ensembl variations parquet cache (rsid -> GRCh38 position). On /data, not the small root fs.
@@ -59,6 +59,12 @@ def port_module(
         spec, variants, studies, out_dir,
         source_repo=module.repo, source_file=provenance_file, warnings=warnings,
     )
+
+    # Ship the source repo's logo alongside the artifacts — auto-discovered by hf_modules and
+    # uploaded by both publish paths. Optional: modules without a source logo (e.g. vo2max) skip it.
+    logo = fetch_logo(module, out_dir)
+    if logo is not None:
+        warnings.append(f"shipped source logo {logo.name}")
 
     result = PortResult(
         name=module.name, output_dir=out_dir,

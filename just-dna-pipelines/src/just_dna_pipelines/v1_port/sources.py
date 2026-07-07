@@ -95,6 +95,30 @@ def fetch_data_file(module: V1Module, cache_dir: Path) -> Path:
     return local_path
 
 
+# Logo filenames discovery/publish already understand (hf_modules scans these; HF/marketplace
+# publish upload them). Gen-I repos ship a root-level logo image; carry it into the ported module.
+LOGO_NAMES = ("logo.png", "logo.jpg", "logo.jpeg")
+
+
+def fetch_logo(module: V1Module, dest_dir: Path) -> Optional[Path]:
+    """Copy the source repo's root logo (``logo.png``/``.jpg``/``.jpeg``) into ``dest_dir``.
+
+    Returns the local path, or ``None`` if the repo ships no logo (e.g. vo2max) or it can't be
+    reached. The logo is optional metadata, so failures are swallowed — never break a port over it.
+    """
+    try:
+        fs = fsspec.filesystem("github", org=_GITHUB_ORG, repo=module.repo)
+        for name in LOGO_NAMES:
+            if fs.exists(name):
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                dest = dest_dir / name
+                fs.get(name, str(dest))
+                return dest
+    except Exception:
+        return None
+    return None
+
+
 def display_meta(name: str) -> dict[str, str]:
     """Canonical title/description/report_title/icon/color for a module (YAML override or default)."""
     meta = get_module_meta(name)
