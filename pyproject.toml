@@ -1,6 +1,6 @@
 [project]
 name = "just-dna-lite"
-version = "0.3.10"
+version = "0.3.11"
 description = "Just DNA Lite version to analyze your omics faster"
 readme = "README.md"
 requires-python = ">=3.13, <3.14"
@@ -12,7 +12,7 @@ dependencies = [
   "dagster-dg-cli>=1.12.22",
   "google-genai>=1.71.0,<2.0",
   "just-prs>=0.7.4",
-  "just-dna-marketplace>=0.2.0",
+  "just-dna-marketplace>=0.4.4",
 ]
 
 [tool.uv.sources]
