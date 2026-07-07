@@ -33,7 +33,7 @@ def fomantic_icon(name: str, size: int | str | None = None, color: str | None = 
         "plus-circle": "plus circle",
         "folder-x": "folder open",
         "heart-pulse": "heartbeat",
-        "activity": "pulse",
+        "activity": "heartbeat",
         "zap": "bolt",
         "droplets": "tint",
         "pill": "pills",

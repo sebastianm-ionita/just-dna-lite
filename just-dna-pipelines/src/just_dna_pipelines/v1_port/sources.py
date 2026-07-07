@@ -8,6 +8,7 @@ pulled from the repo's canonical ``modules.yaml`` overrides via ``module_config.
 the ported spec matches what the app already shows for these modules.
 """
 
+import shutil
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -99,12 +100,17 @@ def fetch_data_file(module: V1Module, cache_dir: Path) -> Path:
 # publish upload them). Gen-I repos ship a root-level logo image; carry it into the ported module.
 LOGO_NAMES = ("logo.png", "logo.jpg", "logo.jpeg")
 
+# Bundled fallback logos for modules whose Gen-I repo ships none (e.g. vo2max — an AI-generated
+# lungs+DNA logo). Tracked in the package so the port stays reproducible.
+_BUNDLED_LOGO_DIR = Path(__file__).parent / "data" / "logos"
+
 
 def fetch_logo(module: V1Module, dest_dir: Path) -> Optional[Path]:
-    """Copy the source repo's root logo (``logo.png``/``.jpg``/``.jpeg``) into ``dest_dir``.
+    """Place the module's logo (``logo.png``) into ``dest_dir``.
 
-    Returns the local path, or ``None`` if the repo ships no logo (e.g. vo2max) or it can't be
-    reached. The logo is optional metadata, so failures are swallowed — never break a port over it.
+    Prefers the source repo's root ``logo.{png,jpg,jpeg}``; falls back to a bundled
+    ``data/logos/<name>.png`` for modules whose repo ships no logo. Returns the local path, or
+    ``None`` if none exists. The logo is optional metadata, so failures never break a port.
     """
     try:
         fs = fsspec.filesystem("github", org=_GITHUB_ORG, repo=module.repo)
@@ -115,7 +121,14 @@ def fetch_logo(module: V1Module, dest_dir: Path) -> Optional[Path]:
                 fs.get(name, str(dest))
                 return dest
     except Exception:
-        return None
+        pass  # network/repo issue — try the bundled fallback below
+
+    bundled = _BUNDLED_LOGO_DIR / f"{module.name}.png"
+    if bundled.exists():
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / "logo.png"
+        shutil.copyfile(bundled, dest)
+        return dest
     return None
 
 
