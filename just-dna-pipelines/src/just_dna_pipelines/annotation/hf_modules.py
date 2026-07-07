@@ -14,6 +14,9 @@ import polars as pl
 from eliot import log_message
 from pydantic import BaseModel
 
+from just_dna_pipelines.annotation.module_cache import (
+    invalidate_module_cache_on_version_change,
+)
 from just_dna_pipelines.module_config import DEFAULT_REPOS, MODULES_CONFIG, Source
 
 
@@ -301,6 +304,18 @@ def discover_hf_modules(repo_ids: Optional[list[str]] = None) -> dict[str, Modul
     # Default: use all configured sources
     return discover_all_modules()
 
+
+# On a version bump, drop stale HF-cached module snapshots BEFORE the first
+# discovery/read, so a republished module isn't shadowed by an old cached revision.
+# Cache housekeeping must never break import — swallow any failure.
+try:
+    invalidate_module_cache_on_version_change()
+except Exception as _cache_exc:  # noqa: BLE001 - best-effort housekeeping
+    log_message(
+        message_type="warning",
+        action="module_cache_invalidation_failed",
+        error=str(_cache_exc),
+    )
 
 # Cache discovered modules at import time
 MODULE_INFOS: dict[str, ModuleInfo] = discover_hf_modules()

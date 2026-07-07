@@ -14,6 +14,10 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Load .env from cwd or parent dirs before any command runs
 
+from just_dna_pipelines.annotation.module_cache import (
+    clear_hf_module_cache,
+    get_app_version,
+)
 from just_dna_pipelines.module_compiler.cli import app as module_compiler_app
 from just_dna_pipelines.v1_port.cli import app as v1_port_app
 from just_dna_marketplace.client_cli import app as marketplace_client_app
@@ -29,6 +33,22 @@ app.add_typer(v1_port_app, name="v1-port")
 # Marketplace reference client (list/download/publish/import-module/find-by-hash/
 # update-module-version). Reads MARKETPLACE_URL / MARKETPLACE_TOKEN from flags, env, or .env.
 app.add_typer(marketplace_client_app, name="marketplace")
+
+
+@app.command("clear-module-cache")
+def clear_module_cache() -> None:
+    """Delete the locally cached HuggingFace annotator-module data.
+
+    Forces the next run to re-download the currently published module versions.
+    Use after republishing a module in place (same version); version bumps are
+    invalidated automatically on startup.
+    """
+    removed = clear_hf_module_cache()
+    if removed:
+        typer.secho(f"Cleared HF module cache for: {', '.join(removed)}", fg=typer.colors.GREEN)
+    else:
+        typer.secho("No cached HF module repos found — nothing to clear.", fg=typer.colors.YELLOW)
+    typer.echo(f"Current app version: {get_app_version()}")
 
 DEFAULT_DAGSTER_PORT = 3005
 
