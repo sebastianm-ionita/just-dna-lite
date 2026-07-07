@@ -211,6 +211,45 @@ def _weight_color(weight: float) -> str:
     return "transparent"
 
 
+# Direction states for weight-less modules (no numeric effect size). superhuman carries
+# state='protective'; the ClinVar gene panels carry state='risk'.
+_BENEFIT_STATES = frozenset({"protective"})
+_RISK_STATES = frozenset({"risk"})
+
+
+def _variant_sign(weight: Optional[float], state: Optional[str]) -> int:
+    """Benefit direction: +1 beneficial, -1 risk, 0 neutral.
+
+    Prefers the numeric weight's sign; when there is no weight (weight-less modules like
+    superhuman / the ClinVar gene panels) falls back to ``state`` so a protective variant still
+    reads as beneficial without a fabricated effect size.
+    """
+    w = weight or 0.0
+    if w > 0:
+        return 1
+    if w < 0:
+        return -1
+    s = (state or "").strip().lower()
+    if s in _BENEFIT_STATES:
+        return 1
+    if s in _RISK_STATES:
+        return -1
+    return 0
+
+
+def _variant_color(weight: Optional[float], state: Optional[str]) -> str:
+    """CSS color for a variant, weight-aware with a state fallback (see ``_variant_sign``)."""
+    w = weight or 0.0
+    if w != 0:
+        return _weight_color(w)
+    sign = _variant_sign(weight, state)
+    if sign > 0:
+        return "rgba(0, 160, 0, 0.3)"  # protective — green
+    if sign < 0:
+        return "rgba(180, 0, 0, 0.3)"  # risk — red
+    return "transparent"
+
+
 def _genotype_str(genotype: list[str] | None) -> str:
     """Format a genotype list as a human-readable string like 'A/G'."""
     if genotype is None:
@@ -392,7 +431,7 @@ def build_longevity_report_data(
                     "alt": "/".join(row.get("alts", []) or []),
                     "zygosity": _zygosity(genotype),
                     "weight": weight,
-                    "weight_color": _weight_color(weight),
+                    "weight_color": _variant_color(weight, row.get("state")),
                     "state": row.get("state", ""),
                     "priority": row.get("priority", ""),
                     "conclusion": row.get("conclusion", ""),
@@ -407,8 +446,8 @@ def build_longevity_report_data(
             # Sort by absolute weight descending for better readability
             variants.sort(key=lambda v: abs(v["weight"]), reverse=True)
 
-            positive = sum(1 for v in variants if v["weight"] > 0)
-            negative = sum(1 for v in variants if v["weight"] < 0)
+            positive = sum(1 for v in variants if _variant_sign(v["weight"], v["state"]) > 0)
+            negative = sum(1 for v in variants if _variant_sign(v["weight"], v["state"]) < 0)
 
             categories[cat_key] = {
                 "title": cat_meta["title"],
@@ -480,7 +519,7 @@ def build_module_report_data(
                 "alt": "/".join(row.get("alts", []) or []),
                 "zygosity": _zygosity(genotype),
                 "weight": weight,
-                "weight_color": _weight_color(weight),
+                "weight_color": _variant_color(weight, row.get("state")),
                 "state": row.get("state", ""),
                 "priority": row.get("priority", ""),
                 "conclusion": row.get("conclusion", ""),
@@ -496,8 +535,10 @@ def build_module_report_data(
 
         variants.sort(key=lambda v: abs(v["weight"]), reverse=True)
 
-        positive = sum(1 for v in variants if v["weight"] > 0)
-        negative = sum(1 for v in variants if v["weight"] < 0)
+        # Direction counts are weight-aware with a state fallback so weight-less protective
+        # modules (superhuman) still tally as beneficial rather than 0 positive / 0 negative.
+        positive = sum(1 for v in variants if _variant_sign(v["weight"], v["state"]) > 0)
+        negative = sum(1 for v in variants if _variant_sign(v["weight"], v["state"]) < 0)
 
         summary = {
             "total_variants": len(variants),

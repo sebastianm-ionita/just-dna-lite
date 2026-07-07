@@ -39,3 +39,39 @@ def test_annotated_rows_unchanged_for_weighted_modules():
     assert kept["rsid"].to_list() == ["rs1"]
     # for a weighted module this matches the legacy weight-based criterion
     assert kept.height == df.filter(pl.col("weight").is_not_null()).height
+
+
+import pytest
+
+from just_dna_pipelines.annotation.report_logic import (
+    _variant_color,
+    _variant_sign,
+    _weight_color,
+)
+
+
+@pytest.mark.parametrize(
+    "weight, state, expected_sign",
+    [
+        (1.5, None, 1),           # weighted module: sign from weight
+        (-2.0, None, -1),
+        (0.0, "protective", 1),   # weight-less protective (superhuman) -> beneficial via state
+        (None, "protective", 1),
+        (None, "risk", -1),       # weight-less risk (ClinVar gene panels)
+        (None, "significant", 0), # 'significant' is not a direction -> neutral
+        (None, None, 0),
+        (2.0, "risk", 1),         # a real weight wins over state
+    ],
+)
+def test_variant_sign_weight_then_state(weight, state, expected_sign):
+    assert _variant_sign(weight, state) == expected_sign
+
+
+def test_variant_color_protective_is_green_at_zero_weight():
+    green = _variant_color(None, "protective")
+    red = _variant_color(None, "risk")
+    assert green.startswith("rgba(0,") and "160" in green   # protective -> green
+    assert red.startswith("rgba(180,")                      # risk -> red
+    assert _variant_color(None, "significant") == "transparent"  # no direction
+    # a weighted variant still colors by its weight
+    assert _variant_color(0.5, None) == _weight_color(0.5)

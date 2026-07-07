@@ -577,7 +577,9 @@ def adapt_superhuman(
                 rsid=rsid,
                 genotype=genotype,
                 weight=None,  # superhuman carries no curated effect size — never invented
-                state="significant",
+                # AREP "protective alleles" are beneficial by definition; with no numeric weight the
+                # direction is carried by `state` (the report colors by it), not a fabricated weight.
+                state="protective",
                 conclusion=conclusion,
                 gene=gene_norm or None,
             ))
@@ -593,7 +595,7 @@ def adapt_superhuman(
             rsid=rsid,
             genotype=str(entry["genotype"]),
             weight=None,
-            state="significant",
+            state="protective",  # refresh additions are protective alleles too (see above)
             conclusion=str(entry["conclusion"]) or "Beneficial variant",
             gene=str(entry["gene"]),
         ))
