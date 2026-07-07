@@ -438,9 +438,14 @@ def _load_superhuman_curation(path: Path = _SUPERHUMAN_CURATION) -> _SuperhumanC
                 if pmid not in gene_list:
                     gene_list.append(pmid)
                 continue
-            if genotype:  # a new-gene addition not present in the source SQLite
-                entry = cur.added.setdefault(rsid, {"gene": gene, "genotype": genotype,
-                                                     "conclusion": conclusion, "pmids": []})
+            if genotype:  # an addition not present in the source SQLite
+                entry = cur.added.setdefault(rsid, {"gene": gene, "genotypes": [],
+                                                    "conclusion": conclusion, "pmids": []})
+                # The genotype cell may list several protective genotypes separated by whitespace
+                # (e.g. a dominant-ish allele matched in both het and hom carriers) — collect each.
+                for gt in genotype.split():
+                    if gt not in entry["genotypes"]:
+                        entry["genotypes"].append(gt)  # type: ignore[union-attr]
                 if pmid not in entry["pmids"]:
                     entry["pmids"].append(pmid)  # type: ignore[union-attr]
                 continue
@@ -589,16 +594,17 @@ def adapt_superhuman(
             study_seen.add((rsid, pmid))
             studies.append(StudyRow(rsid=rsid, pmid=pmid, conclusion=superability or None))
 
-    # New-gene additions from the March-2026 refresh (not present in the source SQLite).
+    # New additions not present in the source SQLite (refresh genes + curated missing alleles).
     for rsid, entry in curation.added.items():
-        variants.append(VariantRow(
-            rsid=rsid,
-            genotype=str(entry["genotype"]),
-            weight=None,
-            state="protective",  # refresh additions are protective alleles too (see above)
-            conclusion=str(entry["conclusion"]) or "Beneficial variant",
-            gene=str(entry["gene"]),
-        ))
+        for genotype in entry["genotypes"]:  # type: ignore[union-attr]
+            variants.append(VariantRow(
+                rsid=rsid,
+                genotype=str(genotype),
+                weight=None,
+                state="protective",  # additions are protective alleles too (see above)
+                conclusion=str(entry["conclusion"]) or "Beneficial variant",
+                gene=str(entry["gene"]),
+            ))
         for pmid in entry["pmids"]:  # type: ignore[union-attr]
             if (rsid, pmid) in study_seen:
                 continue

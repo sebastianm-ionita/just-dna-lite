@@ -219,16 +219,17 @@ def test_superhuman_added_genes_have_explicit_verified_genotypes():
     cur = _load_superhuman_curation()
     # Allele orientation confirmed against dbSNP/MyVariant (see docs/SUPERHUMAN_REFRESH_PLAN.md).
     expected = {
-        "rs4570625": ("TPH2", "T/T"),      # -703 minor-allele homozygous
-        "rs4680": ("COMT", "G/G"),         # Val158 (G)
-        "rs6265": ("BDNF", "C/C"),         # Val66 (C)
-        "rs5882": ("CETP", "G/G"),         # Val405 (G)
-        "rs121918393": ("APOE", "A/C"),    # Christchurch R136S carrier
+        "rs4570625": ("TPH2", {"T/T"}),          # -703 minor-allele homozygous
+        "rs4680": ("COMT", {"G/G"}),             # Val158 (G)
+        "rs6265": ("BDNF", {"C/C"}),             # Val66 (C)
+        "rs5882": ("CETP", {"G/G"}),             # Val405 (G)
+        "rs121918393": ("APOE", {"A/C"}),        # Christchurch R136S carrier
+        "rs11591147": ("PCSK9", {"G/T", "T/T"}), # R46L, protective in het + hom Leu carriers
     }
     assert set(cur.added) == set(expected), f"added rsids drifted: {sorted(cur.added)}"
-    for rsid, (gene, gt) in expected.items():
+    for rsid, (gene, gts) in expected.items():
         entry = cur.added[rsid]
-        assert entry["gene"] == gene and entry["genotype"] == gt
+        assert entry["gene"] == gene and set(entry["genotypes"]) == gts
         assert all(_DIGITS.match(p) for p in entry["pmids"]) and entry["pmids"]
 
 

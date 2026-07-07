@@ -51,6 +51,7 @@ MSTN,rs3187415,rsid,,15215484,founding,primary,,,,,Myostatin mutation associated
 MSTN,rs374256136,rsid,,15215484,founding,primary,,,,,Myostatin mutation associated with gross muscle hypertrophy in a child
 NPSR1,rs1406844918,rsid,,31619542,primary,insource,,,,,Mutant neuropeptide S receptor reduces sleep duration with preserved memory consolidation
 NTRK1,,gene-indel,,8696348,founding,primary,,,,,Mutations in the TRKA/NGF receptor gene in patients with congenital insensitivity to pain with anhidrosis
+PCSK9,rs11591147,rsid,G/T T/T,16554528,founding,primary,,,Low LDL cholesterol; lower coronary disease risk (PCSK9 R46L).,,"Sequence variations in PCSK9, low LDL, and protection against coronary heart disease"
 PCSK9,rs28362286,rsid,,16554528,founding,primary,,,,,"Sequence variations in PCSK9, low LDL, and protection against coronary heart disease"
 PCSK9,rs28362286,rsid,,32846800,primary,insource,,,,,Loss-of-function mutation of PCSK9 as a protective factor in the clinical expression of familial hypercholesterolemia
 PCSK9,rs67608943,rsid,,16554528,founding,primary,,,,,"Sequence variations in PCSK9, low LDL, and protection against coronary heart disease"
