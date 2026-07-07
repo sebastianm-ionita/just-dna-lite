@@ -478,33 +478,42 @@ def _superhuman_genotypes(
     longevitymap. The HF annotator joins on chrom+start+**genotype** (ref/alt are not compared), so
     the genotype allele-list must equal what a carrier's VCF would produce: het = sorted(ref, alt),
     hom = alt/alt. Zygosity ``both`` emits both so heterozygous and homozygous carriers each match.
-    The effect allele is the derived (alt); for a multiallelic Ensembl alt list we take the first
-    single-base token (the position join ignores which alt, so this only shapes the pairing)."""
+
+    Ensembl lists **every** observed alt at the position (``C`` -> ``A|G|T``), so we cannot guess
+    which single alt the carrier has — we emit het/hom for **all** single-base alts and let the
+    position+genotype join keep whichever the user actually carries. Extra genotypes match nobody
+    and are harmless. Indel alts (multi-base) are emitted only when no SNV alt exists; note that
+    indel ref/alt representation can differ between Ensembl and the VCF, so indels may still miss."""
     gt = to_slash_genotype(row.get("genotype"))
     if gt:  # explicit two-base genotype in the source (e.g. APOA2 'CC', APOE 'TT')
         return [gt]
 
     ref = _norm_allele(row.get("ref_allele"))
-    alt = _norm_allele(row.get("alt_allele"))
-    if ref is None or alt is None:
+    src_alt = _norm_allele(row.get("alt_allele"))
+    if ref is not None and src_alt is not None:
+        alts = [src_alt]  # the source spelled out this row's specific alt
+    else:
         rref, ralt = resolved or (None, None)
         ref = ref or _norm_allele(rref)
-        if alt is None and ralt:
-            tokens = str(ralt).upper().split("|")
-            singles = [t for t in tokens if _norm_allele(t) and len(t) == 1]
-            alt = _norm_allele(singles[0]) if singles else _norm_allele(tokens[0])
-    if alt is None:
+        clean = [a for a in (_norm_allele(t) for t in str(ralt or "").split("|")) if a]
+        singles = [a for a in clean if len(a) == 1]
+        alts = singles or clean  # every SNV alt; fall back to indel alts only if no SNV
+        if src_alt is not None and src_alt not in alts:
+            alts.append(src_alt)
+    if not alts:
         return []
 
     zyg = str(row.get("zygosity") or "").strip().lower()
-    hom = "/".join(sorted([alt, alt]))
-    het = "/".join(sorted([ref, alt])) if ref else None
-    if zyg.startswith("hom"):
-        out = [hom]
-    elif zyg.startswith("het"):
-        out = [het or hom]
-    else:  # 'both' or unspecified: match carriers in either zygosity
-        out = [g for g in (het, hom) if g]
+    out: list[str] = []
+    for alt in alts:
+        hom = "/".join(sorted([alt, alt]))
+        het = "/".join(sorted([ref, alt])) if ref else None
+        if zyg.startswith("hom"):
+            out.append(hom)
+        elif zyg.startswith("het"):
+            out.append(het or hom)
+        else:  # 'both' or unspecified: match carriers in either zygosity
+            out.extend(g for g in (het, hom) if g)
     return list(dict.fromkeys(out))
 
 

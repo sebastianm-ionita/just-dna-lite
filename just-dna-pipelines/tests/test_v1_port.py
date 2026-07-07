@@ -17,6 +17,7 @@ import pytest
 from just_dna_pipelines.v1_port.adapters import (
     _SUPERHUMAN_CURATION,
     _load_superhuman_curation,
+    _superhuman_genotypes,
     _longevitymap_genotype,
     adapt_coronary,
     adapt_longevitymap,
@@ -293,3 +294,35 @@ def test_symbol_resolver_maps_aliases_and_flags_typos():
     # No resolver (no gene_info cache) → pass-through, nothing flagged.
     passthrough, aliases, missing = resolve_panel_genes({"MYCL1"}, None)
     assert passthrough == {"MYCL1"} and not aliases and not missing
+
+
+def test_superhuman_genotypes_cover_every_multiallelic_alt():
+    """Regression: a named protective variant with empty source alleles must emit a genotype for
+    EVERY single-base Ensembl alt, not just the first — else a carrier whose real allele is a later
+    alt (e.g. ANGPTL3 rs1168015 C>G where Ensembl lists C -> A|G|T) never matches (v1->v2 0-results
+    bug, 2026-07)."""
+    row = {"rsid": "rs1168015", "genotype": None, "ref_allele": None,
+           "alt_allele": None, "zygosity": "both"}
+    gts = _superhuman_genotypes(row, ("C", "A|G|T"))
+    # the carrier is G/G in the VCF; that genotype must be present
+    assert "G/G" in gts, gts
+    # every single-base alt gets both a het and a hom pairing with the reference
+    for alt in ("A", "G", "T"):
+        assert "/".join(sorted(["C", alt])) in gts, (alt, gts)
+        assert f"{alt}/{alt}" in gts, (alt, gts)
+
+
+def test_superhuman_genotypes_hom_only_and_source_alleles():
+    """hom zygosity emits only the homozygous genotype; an explicit source alt is used verbatim."""
+    # recessive (hom) phenotype: only alt/alt, no het
+    hom = _superhuman_genotypes(
+        {"rsid": "rs1", "genotype": None, "ref_allele": None, "alt_allele": None, "zygosity": "hom"},
+        ("C", "T"),
+    )
+    assert hom == ["T/T"], hom
+    # source spelled out ref/alt for this row -> use that alt, not the Ensembl list
+    src = _superhuman_genotypes(
+        {"rsid": "rs2", "genotype": None, "ref_allele": "G", "alt_allele": "C", "zygosity": "both"},
+        ("G", "A|C|T"),
+    )
+    assert set(src) == {"C/G", "C/C"}, src
