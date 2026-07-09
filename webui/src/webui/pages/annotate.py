@@ -2722,10 +2722,12 @@ TAB_DRAG_JS = """
 (function () {
     if (window.__tabDndInit) return;
     window.__tabDndInit = true;
-    var SEL = '#right-panel-tab-menu .item';
+    var MENU = '#right-panel-tab-menu';
+    var SEL = MENU + ' .item';
+    var menuEl = function () { return document.querySelector(MENU); };
     var clearMarks = function () {
         document.querySelectorAll(
-            '#right-panel-tab-menu .tab-dragging, #right-panel-tab-menu .tab-drag-over'
+            MENU + ' .tab-dragging, ' + MENU + ' .tab-drag-over'
         ).forEach(function (el) { el.classList.remove('tab-dragging', 'tab-drag-over'); });
     };
     document.addEventListener('dragstart', function (e) {
@@ -2734,6 +2736,12 @@ TAB_DRAG_JS = """
         // Firefox requires dataTransfer.setData() for the drag to begin at all.
         try { e.dataTransfer.setData('text/plain', item.dataset.tabId || ''); } catch (_) {}
         if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+        // Stash the source id on the menu element. We DON'T read it back from
+        // dataTransfer on drop: Firefox doesn't reliably expose dataTransfer
+        // data through React's synthetic onDrop, so drop_tab_spec reads this
+        // attribute instead (setData above is only to satisfy FF's drag-start).
+        var menu = menuEl();
+        if (menu) menu.dataset.dragSrc = item.dataset.tabId || '';
         item.classList.add('tab-dragging');
     });
     document.addEventListener('dragover', function (e) {
@@ -2753,11 +2761,18 @@ TAB_DRAG_JS = """
         var item = e.target.closest ? e.target.closest(SEL) : null;
         if (!item) return;
         // Stop the browser's default drop handling; the React on_drop handler
-        // on the draggable_div element still fires and calls drop_tab_onto.
+        // on the draggable_div element still fires and calls move_tab, reading
+        // the source id from menu.dataset.dragSrc (set in dragstart).
         e.preventDefault();
         clearMarks();
     });
-    document.addEventListener('dragend', clearMarks);
+    document.addEventListener('dragend', function () {
+        clearMarks();
+        // Clear the stashed source only after the whole gesture is over, so it
+        // can't race React's onDrop read regardless of listener ordering.
+        var menu = menuEl();
+        if (menu) delete menu.dataset.dragSrc;
+    });
 })();
 """
 
@@ -2807,11 +2822,11 @@ def _tab_item(tab_id: rx.Var[str]) -> rx.Component:
             "prs",
             draggable_div(
                 fomantic_icon(
-                    "chart-bar",
+                    "chart bar",
                     size=16,
-                    color=rx.cond(UploadState.right_panel_active_tab == "prs", "#f2711c", "#888"),
+                    color=rx.cond(UploadState.right_panel_active_tab == "prs", "#6435c9", "#888"),
                 ),
-                " PRS",
+                " Polygenic Risk Scores",
                 rx.cond(
                     PRSState.prs_results.length() > 0,
                     rx.el.span(
@@ -2835,9 +2850,9 @@ def _tab_item(tab_id: rx.Var[str]) -> rx.Component:
             "annotated_files",
             draggable_div(
                 fomantic_icon(
-                    "folder-output",
+                    "file code outline",
                     size=16,
-                    color=rx.cond(UploadState.right_panel_active_tab == "annotated_files", "#00b5ad", "#888"),
+                    color=rx.cond(UploadState.right_panel_active_tab == "annotated_files", "#6435c9", "#888"),
                 ),
                 " Annotated Files",
                 rx.el.span(
@@ -2859,9 +2874,9 @@ def _tab_item(tab_id: rx.Var[str]) -> rx.Component:
             "reports",
             draggable_div(
                 fomantic_icon(
-                    "file-text",
+                    "file alternate outline",
                     size=16,
-                    color=rx.cond(UploadState.right_panel_active_tab == "reports", "#e03997", "#888"),
+                    color=rx.cond(UploadState.right_panel_active_tab == "reports", "#6435c9", "#888"),
                 ),
                 " Reports",
                 rx.cond(
@@ -2887,11 +2902,11 @@ def _tab_item(tab_id: rx.Var[str]) -> rx.Component:
             "analysis",
             draggable_div(
                 fomantic_icon(
-                    "plus-circle",
+                    "stethoscope",
                     size=16,
-                    color=rx.cond(UploadState.right_panel_active_tab == "analysis", "#2185d0", "#888"),
+                    color=rx.cond(UploadState.right_panel_active_tab == "analysis", "#6435c9", "#888"),
                 ),
-                " New Analysis",
+                " Analysis Tools",
                 rx.cond(
                     UploadState.selected_modules.length() > 0,
                     rx.el.span(

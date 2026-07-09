@@ -316,7 +316,7 @@ def _ensure_normalized_parquet(safe_user_id: str, selected_file: str, partition_
 
 
 # Canonical tab order — single source of truth used both as the default for the
-# tab_order state var and as the validation set in drop_tab_onto.
+# tab_order state var and as the validation set in move_tab.
 DEFAULT_TAB_ORDER: list[str] = ["input", "prs", "annotated_files", "reports", "analysis"]
 
 
